@@ -201,11 +201,21 @@ public partial class MainWindow : Window
             {
                 Size expected = FloatingLayout.FromWidth(mode, width, MaximumClientSize(Position));
                 SetFloatingSize(width);
-                await Task.Delay(100);
-                if (Math.Abs(ClientSize.Width - expected.Width) > 1.5 || Math.Abs(ClientSize.Height - expected.Height) > 1.5)
-                    throw new InvalidOperationException($"Native resize did not settle: {mode}, expected {expected}, actual {ClientSize}.");
-                if (Meter.GetFaceBounds(mode).Top > 1.5)
-                    throw new InvalidOperationException("The native floating meter still has a top letterbox.");
+                // Native callbacks and the child layout can settle on separate
+                // frames, particularly during the first Metal/font compilation.
+                var deadline = System.Diagnostics.Stopwatch.StartNew();
+                while (true)
+                {
+                    UpdateLayout();
+                    bool sizeReady = Math.Abs(ClientSize.Width - expected.Width) <= 1.5 &&
+                        Math.Abs(ClientSize.Height - expected.Height) <= 1.5;
+                    bool layoutReady = Meter.Compact && Math.Abs(Meter.Bounds.Width - ClientSize.Width) <= 1.5 &&
+                        Math.Abs(Meter.Bounds.Height - ClientSize.Height) <= 1.5 && Meter.GetFaceBounds(mode).Top <= 1.5;
+                    if (sizeReady && layoutReady) break;
+                    if (deadline.Elapsed > TimeSpan.FromSeconds(3))
+                        throw new InvalidOperationException($"Native layout did not settle: mode={mode}, expected={expected}, client={ClientSize}, meter={Meter.Bounds}, face={Meter.GetFaceBounds(mode)}, compact={Meter.Compact}.");
+                    await Task.Delay(25);
+                }
             }
         }
         Screen? screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
