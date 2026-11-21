@@ -55,7 +55,7 @@ public sealed class SmokeApplication : Application
                 try
                 {
                     await NativePointerChecks.Run(window);
-                    Console.WriteLine("PASS: AppKit mouse events, custom diagonal resize cursor, real Quartz cursor sampling, repeated native resizes, and native frame bounds.");
+                    Console.WriteLine("PASS: AppKit mouse events, standard resize cursor, real Quartz cursor sampling, repeated native resizes, and native frame bounds.");
                 }
                 catch (Exception error)
                 {
@@ -149,7 +149,7 @@ internal static class NativePointerChecks
             await Settle(window);
             if (hovered == 0)
                 throw new InvalidOperationException($"{mode}: resize cursor check received no routed native hover on ResizeHandle at {desktop}.");
-            NativeInput.AssertDiagonalResizeCursor($"{mode}: resize grip hover");
+            NativeInput.AssertStandardResizeCursor($"{mode}: resize grip hover");
         }
         finally { handle.RemoveHandler(InputElement.PointerMovedEvent, onHover); }
     }
@@ -270,25 +270,21 @@ internal static class NativeInput
     public const nuint MouseDragged = 6;
     private static int eventNumber;
 
-    public static void AssertDiagonalResizeCursor(string context)
+    public static void AssertStandardResizeCursor(string context)
     {
         nint cursorClass = GetClass("NSCursor");
         nint current = GetObject(cursorClass, Selector("currentCursor"));
         if (cursorClass == 0 || current == 0)
             throw new InvalidOperationException($"{context}: NSCursor.currentCursor is unavailable (class=0x{cursorClass:x}, current=0x{current:x}).");
         nint crosshair = GetObject(cursorClass, Selector("crosshairCursor"));
-        nint image = GetObject(current, Selector("image"));
-        NativePoint size = image == 0 ? default : GetPointOrSize(image, Selector("size"));
-        NativePoint hotspot = GetPointOrSize(current, Selector("hotSpot"));
         string nativeClass = Marshal.PtrToStringUTF8(GetClassName(current)) ?? "unknown";
-        string details = $"class={nativeClass}, current=0x{current:x}, crosshair=0x{crosshair:x}, image=0x{image:x}, size={size.X:F3}x{size.Y:F3}, hotspot=({hotspot.X:F3},{hotspot.Y:F3})";
-        if (crosshair == 0 || current == crosshair || image == 0 || !Near(size.X, 32) || !Near(size.Y, 32) ||
-            !Near(hotspot.X, 16) || !Near(hotspot.Y, 16))
-            throw new InvalidOperationException($"{context}: expected a custom diagonal cursor with image 32x32 and hotspot (16,16), distinct from the native crosshair; {details}.");
-        Console.WriteLine($"Verified native diagonal resize cursor: {details}.");
+        string details = $"class={nativeClass}, current=0x{current:x}, crosshair=0x{crosshair:x}";
+        // Avalonia.Native 11.3.22 maps BottomRightCorner to this native cursor.
+        // The requested original cursor must not remain the oversized bitmap.
+        if (crosshair == 0 || current != crosshair)
+            throw new InvalidOperationException($"{context}: expected the original standard BottomRightCorner/crosshair cursor; {details}.");
+        Console.WriteLine($"Verified native standard resize cursor: {details}.");
     }
-
-    private static bool Near(double actual, double expected) => double.IsFinite(actual) && Math.Abs(actual - expected) < 0.01;
 
     public static void Warp(Point desktop)
     {
@@ -331,10 +327,6 @@ internal static class NativeInput
     private static extern nint GetObject(nint target, nint selector);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern nint GetInteger(nint target, nint selector);
-    // CGPoint and CGSize both contain two CGFloat doubles. Their 16-byte
-    // floating-point aggregate return uses objc_msgSend on x64 and Apple Silicon.
-    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
-    private static extern NativePoint GetPointOrSize(nint target, nint selector);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern nint CreateMouseEvent(nint target, nint selector, nuint type, NativePoint location,
         nuint modifierFlags, double timestamp, nint windowNumber, nint context, nint eventNumber, nint clickCount, float pressure);

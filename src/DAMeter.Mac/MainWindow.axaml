@@ -62,12 +62,13 @@
                        TextWrapping="Wrap" IsVisible="{Binding Normal}" />
         </Grid>
         <Canvas>
-            <Border x:Name="ResizeHandle" Width="20" Height="20" Background="Transparent"
+            <Border x:Name="ResizeHandle" Width="20" Height="20" Background="Transparent" Cursor="BottomRightCorner"
                     PointerPressed="ResizeWindow" PointerMoved="ResizePointerMoved" PointerReleased="ResizePointerReleased"
                     PointerCaptureLost="ResizePointerCaptureLost" ToolTip.Tip="右下をドラッグして拡大・縮小"
                     AutomationProperties.Name="メーターのサイズ変更">
-                <Border x:Name="ResizeDecoration" CornerRadius="4" BorderThickness="1" IsHitTestVisible="False">
-                    <Path Width="12" Height="12" Stretch="Uniform" Fill="#EDF6F7" HorizontalAlignment="Center" VerticalAlignment="Center"
+                <Border x:Name="ResizeDecoration" Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        CornerRadius="3" BorderThickness="1" IsHitTestVisible="False">
+                    <Path Width="8" Height="8" Stretch="Uniform" Fill="#EDF6F7" HorizontalAlignment="Center" VerticalAlignment="Center"
                           Data="M0,0 L7,0 L4.5,2.5 L11.5,9.5 L14,7 L14,14 L7,14 L9.5,11.5 L2.5,4.5 L0,7 Z" />
                 </Border>
             </Border>

@@ -18,7 +18,6 @@ public partial class MainWindow : Window
 {
     private readonly SettingsStore store;
     private readonly bool smokeTest;
-    private readonly Cursor resizeCursor;
     private readonly DispatcherTimer saveTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private readonly MacTrayService? tray;
     private SettingsWindow? settingsWindow;
@@ -43,12 +42,6 @@ public partial class MainWindow : Window
     public MainWindow(SettingsStore store, AppSettings settings, bool smokeTest = false, NativeMacAudioService? audio = null)
     {
         InitializeComponent();
-        // Avalonia.Native maps standard diagonal resize cursors to a crosshair
-        // on macOS. Use a fixed-size bitmap rather than another standard corner.
-        using (var image = new Avalonia.Media.Imaging.Bitmap(Avalonia.Platform.AssetLoader.Open(
-                   new Uri("avares://DAMeter.Mac/Assets/resize-diagonal.png"))))
-            resizeCursor = new Cursor(image, new PixelPoint(16, 16));
-        ResizeHandle.Cursor = resizeCursor;
         this.store = store;
         this.smokeTest = smokeTest;
         if (!smokeTest)
@@ -135,8 +128,6 @@ public partial class MainWindow : Window
         Closed += (_, _) =>
         {
             FinishInteractions();
-            ResizeHandle.Cursor = null;
-            resizeCursor.Dispose();
             saveTimer.Stop();
             LayoutUpdated -= UpdateResizeHandle;
             Screens.Changed -= ScreensChanged;

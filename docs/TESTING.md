@@ -1,10 +1,16 @@
 # DAMeter のテスト結果と Windows 受け入れ確認
 
+## Mac版0.1.9：標準カーソルと小型マーク
+
+独自Bitmapカーソルを取り除いて `BottomRightCorner` を復元し、ネイティブ検証も実ホバー後の `NSCursor.currentCursor` が当初と同じ `NSCursor.crosshairCursor` であることを確認する形に戻しました。3表示での拡縮・移動の反復検証は維持します。
+
+見た目のマークだけを14×14へ小さくし、入力領域は20×20を維持します。Linuxで既存のMac回帰テスト72件が成功しました。実表示のマーク位置と、両Mac CPUでの標準カーソルも確認し、CIの結果を検証完了後に記録します。
+
 ## Mac版0.1.8：サイズ変更カーソルと常時表示マーク
 
 LinuxでMacの既存回帰テスト72件が成功しました。フローティングでもサイズ変更マークが表示されるよう既存の画面テストを更新し、右下の入力領域・拡縮・移動・透過復帰が維持されることを確認しています。Releaseビルドは警告0・エラー0です。3種類のメーターをSkiaで画像出力し、右下マークの位置も確認しました（このLinux画像確認はmacOSのフォント表示確認とは異なります）。
 
-Avalonia.Native 11.3.22の `cursor.mm` が `BottomRightCorner` を `NSCursor.crosshairCursor` へ割り当てることをソースで確認しました。独自Bitmapカーソルへ変更し、ネイティブ検証では3表示それぞれで実際のホバー入力後の `NSCursor.currentCursor` が十字と異なり、画像32×32・ホットスポット16,16であることを検証します。AppKit経由の拡縮・上端移動の検証も維持します。Macでの実行結果はCIの完了後に記録します。
+Avalonia.Native 11.3.22の `cursor.mm` が `BottomRightCorner` を `NSCursor.crosshairCursor` へ割り当てることをソースで確認しました。独自Bitmapカーソルへ変更し、ネイティブ検証では3表示それぞれで実際のホバー入力後の `NSCursor.currentCursor` が十字と異なり、画像32×32・ホットスポット16,16であることを検証します。AppKit経由の拡縮・上端移動の検証も維持します。ソース `35c60f8` の [Mac CI](https://github.com/atstti/codex/actions/runs/44924156498) はApple Silicon・Intelともに成功し、各CPUの3表示で専用カーソルの画像寸法・ホットスポット・十字と異なることを確認しました。[Windows CI](https://github.com/atstti/codex/actions/runs/44924156429) も成功しています。
 
 ## Mac版0.1.7：移動改善と再現診断
 
