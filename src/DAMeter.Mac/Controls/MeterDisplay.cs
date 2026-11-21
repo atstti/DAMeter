@@ -30,6 +30,10 @@ public sealed class MeterDisplay : Control
     private static readonly Typeface Face = new(new FontFamily("Helvetica Neue, Hiragino Kaku Gothic ProN"));
     private static readonly int[] VuTicks = [-20, -10, -7, -5, -3, -2, -1, 0, 1, 2, 3];
     private static readonly StreamGeometry VuArc = CreateVuArc();
+    private static readonly Rect HorizontalFace = new(12, 12, 976, 256);
+    private static readonly Rect VerticalFace = new(12, 12, 296, 516);
+    private static readonly Rect AnalogLeftFace = new(12, 12, 476, 382);
+    private static readonly Rect AnalogRightFace = new(512, 12, 476, 382);
 
     private readonly Dictionary<string, FormattedText> _labels = [];
     private MeterMode _mode;
@@ -69,12 +73,7 @@ public sealed class MeterDisplay : Control
         if (Bounds.Width <= 0 || Bounds.Height <= 0)
             return;
 
-        Size canvas = _mode switch
-        {
-            MeterMode.AnalogVu => new Size(1000, 440),
-            MeterMode.VerticalPeak => new Size(320, 540),
-            _ => new Size(1000, 280)
-        };
+        Size canvas = GetCanvasSize(_mode);
         double scale = Math.Min(Bounds.Width / canvas.Width, Bounds.Height / canvas.Height);
         using var placement = dc.PushTransform(Matrix.CreateTranslation(
             (Bounds.Width - canvas.Width * scale) / 2,
@@ -84,8 +83,8 @@ public sealed class MeterDisplay : Control
         switch (_mode)
         {
             case MeterMode.AnalogVu:
-                DrawAnalog(dc, new Rect(12, 12, 476, 382), "L", _leftVu);
-                DrawAnalog(dc, new Rect(512, 12, 476, 382), "R", _rightVu);
+                DrawAnalog(dc, AnalogLeftFace, "L", _leftVu);
+                DrawAnalog(dc, AnalogRightFace, "R", _rightVu);
                 Label(dc, "RMS ベースの VU 風表示 · 約 300 ms 応答 · 厳密な規格準拠ではありません", 500, 410, 17, Muted);
                 break;
             case MeterMode.VerticalPeak:
@@ -97,9 +96,41 @@ public sealed class MeterDisplay : Control
         }
     }
 
+    /// <summary>
+    /// Gets the visible meter plates in this control's logical coordinates,
+    /// excluding the transparent space introduced by aspect-ratio fitting.
+    /// Returns an empty rectangle before the control has a positive size.
+    /// </summary>
+    public Rect GetFaceBounds(MeterMode mode)
+    {
+        if (Bounds.Width <= 0 || Bounds.Height <= 0)
+            return default;
+
+        Size canvas = GetCanvasSize(mode);
+        Rect face = mode switch
+        {
+            MeterMode.AnalogVu => AnalogLeftFace.Union(AnalogRightFace),
+            MeterMode.VerticalPeak => VerticalFace,
+            _ => HorizontalFace
+        };
+        double scale = Math.Min(Bounds.Width / canvas.Width, Bounds.Height / canvas.Height);
+        return new Rect(
+            (Bounds.Width - canvas.Width * scale) / 2 + face.X * scale,
+            (Bounds.Height - canvas.Height * scale) / 2 + face.Y * scale,
+            face.Width * scale,
+            face.Height * scale);
+    }
+
+    private static Size GetCanvasSize(MeterMode mode) => mode switch
+    {
+        MeterMode.AnalogVu => new Size(1000, 440),
+        MeterMode.VerticalPeak => new Size(320, 540),
+        _ => new Size(1000, 280)
+    };
+
     private void DrawHorizontal(DrawingContext dc)
     {
-        dc.DrawRectangle(Panel, FramePen, new Rect(12, 12, 976, 256), 18, 18);
+        dc.DrawRectangle(Panel, FramePen, HorizontalFace, 18, 18);
         Label(dc, "S T E R E O   P E A K", 40, 28, 17, Muted, false);
         Label(dc, "dBFS", 942, 28, 17, Muted);
         for (int db = -60; db <= 0; db += 6)
@@ -135,7 +166,7 @@ public sealed class MeterDisplay : Control
 
     private void DrawVertical(DrawingContext dc)
     {
-        dc.DrawRectangle(Panel, FramePen, new Rect(12, 12, 296, 516), 18, 18);
+        dc.DrawRectangle(Panel, FramePen, VerticalFace, 18, 18);
         Label(dc, "P E A K   /   dBFS", 160, 29, 16, Muted);
         for (int db = -60; db <= 0; db += 6)
         {

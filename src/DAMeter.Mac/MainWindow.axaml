@@ -47,12 +47,14 @@
             <TextBlock Grid.Row="3" Text="{Binding Status}" Foreground="#A6B7C8" Margin="20,8,30,14"
                        TextWrapping="Wrap" IsVisible="{Binding Normal}" />
         </Grid>
-        <Border x:Name="ResizeHandle" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20"
-                Background="Transparent" Cursor="BottomRightCorner" PointerPressed="ResizeWindow"
-                ToolTip.Tip="ドラッグしてサイズ変更">
-            <Border x:Name="ResizeDecoration" Background="#303F4D" CornerRadius="0,0,8,0" IsVisible="{Binding Normal}">
-                <TextBlock Text="◢" HorizontalAlignment="Center" Foreground="#A6B7C8" />
+        <Canvas>
+            <Border x:Name="ResizeHandle" Width="20" Height="20" Background="Transparent" Cursor="BottomRightCorner"
+                    PointerPressed="ResizeWindow" PointerMoved="ResizePointerMoved" PointerReleased="ResizePointerReleased"
+                    PointerCaptureLost="ResizePointerCaptureLost" ToolTip.Tip="ドラッグしてサイズ変更">
+                <Border x:Name="ResizeDecoration" Background="#303F4D" CornerRadius="0,0,8,0" IsVisible="{Binding Normal}">
+                    <TextBlock Text="◢" HorizontalAlignment="Center" Foreground="#A6B7C8" />
+                </Border>
             </Border>
-        </Border>
+        </Canvas>
     </Grid>
 </Window>

@@ -83,6 +83,10 @@ public sealed class MainWindowTests
         Assert.True(resizeHandle.IsVisible && resizeHandle.IsHitTestVisible);
         Point corner = resizeHandle.TranslatePoint(new Point(10, 10), window)!.Value;
         Assert.Same(resizeHandle, window.InputHitTest(corner));
+        Point faceCorner = meter.TranslatePoint(meter.GetFaceBounds(window.ViewModel.Meter).BottomRight, window)!.Value;
+        Point handleCorner = resizeHandle.TranslatePoint(new Point(20, 20), window)!.Value;
+        Assert.Equal(faceCorner.X, handleCorner.X, 5);
+        Assert.Equal(faceCorner.Y, handleCorner.Y, 5);
         Assert.Equal(new Thickness(0), meter.Margin);
         Assert.True(meter.IsVisible);
 

@@ -24,6 +24,9 @@ public partial class MainWindow : Window
     private bool opened;
     private bool exiting;
     private bool shutdownRequested;
+    private IPointer? resizePointer;
+    private Point resizeOrigin;
+    private Size resizeStartSize;
     private readonly TaskCompletionSource shutdownCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public bool IsShutdownPrepared => exiting;
     public bool IsShutdownRequested => shutdownRequested || exiting;
@@ -100,7 +103,9 @@ public partial class MainWindow : Window
         };
         Closed += (_, _) =>
         {
+            FinishResize();
             saveTimer.Stop();
+            LayoutUpdated -= UpdateResizeHandle;
             Screens.Changed -= ScreensChanged;
             tray?.Dispose();
             ViewModel.Dispose();
@@ -108,7 +113,28 @@ public partial class MainWindow : Window
         };
         PositionChanged += (_, _) => GeometryChanged();
         SizeChanged += (_, _) => GeometryChanged();
+        LayoutUpdated += UpdateResizeHandle;
+        Deactivated += (_, _) => FinishResize();
         Screens.Changed += ScreensChanged;
+    }
+
+    private void UpdateResizeHandle(object? sender, EventArgs e)
+    {
+        // Match the painted face rather than the transparent letterbox around
+        // it. This keeps the grip on the meter at every size and aspect ratio.
+        var corner = new Point(Bounds.Width, Bounds.Height);
+        if (ViewModel.Floating)
+        {
+            Rect face = Meter.GetFaceBounds(ViewModel.Meter);
+            if (face.Width > 0 && face.Height > 0)
+                corner = Meter.TranslatePoint(face.BottomRight, this) ?? corner;
+        }
+        double left = Math.Clamp(corner.X - ResizeHandle.Width, 0, Math.Max(0, Bounds.Width - ResizeHandle.Width));
+        double top = Math.Clamp(corner.Y - ResizeHandle.Height, 0, Math.Max(0, Bounds.Height - ResizeHandle.Height));
+        if (!double.IsFinite(Canvas.GetLeft(ResizeHandle)) || Math.Abs(Canvas.GetLeft(ResizeHandle) - left) > 0.01)
+            Canvas.SetLeft(ResizeHandle, left);
+        if (!double.IsFinite(Canvas.GetTop(ResizeHandle)) || Math.Abs(Canvas.GetTop(ResizeHandle) - top) > 0.01)
+            Canvas.SetTop(ResizeHandle, top);
     }
 
     private void GeometryChanged()
@@ -152,6 +178,7 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.Floating))
         {
+            FinishResize();
             CaptureBounds();
             applyingBounds = true;
             try
@@ -167,7 +194,12 @@ public partial class MainWindow : Window
             Dispatcher.UIThread.Post(() => { CaptureBounds(); ScheduleSave(); }, DispatcherPriority.Loaded);
         }
         else if (e.PropertyName == nameof(MainViewModel.Topmost)) Topmost = ViewModel.Topmost;
-        else if (e.PropertyName == nameof(MainViewModel.ClickThrough)) ApplyClickThrough();
+        else if (e.PropertyName == nameof(MainViewModel.Meter)) UpdateResizeHandle(this, EventArgs.Empty);
+        else if (e.PropertyName == nameof(MainViewModel.ClickThrough))
+        {
+            FinishResize();
+            ApplyClickThrough();
+        }
         if (e.PropertyName != nameof(MainViewModel.Status) && !applyingBounds) ScheduleSave();
     }
     private void ApplyClickThrough()
@@ -225,6 +257,7 @@ public partial class MainWindow : Window
     private void HideSafely()
     {
         if (!HasRecoveryIcon) { Exit(); return; }
+        FinishResize();
         CaptureBounds(); Persist(); Hide();
     }
     public void ReturnToNormal() { ShowAccessible(); ViewModel.Floating = false; }
@@ -253,11 +286,58 @@ public partial class MainWindow : Window
     }
     private void DragWindow(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e);
+        if (resizePointer is null && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e);
     }
     private void ResizeWindow(object? sender, PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginResizeDrag(WindowEdge.SouthEast, e);
+        if (!CanResize || WindowState != WindowState.Normal || ViewModel.ClickThrough ||
+            !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        FinishResize();
+        // Avalonia.Native's macOS BeginResizeDrag is a no-op. Capture input and
+        // calculate each size from the gesture origin in window-local DIPs.
+        // Handle-local deltas feed back when layout moves the grip itself.
+        resizeOrigin = e.GetPosition(this);
+        resizeStartSize = new Size(Bounds.Width, Bounds.Height);
+        resizePointer = e.Pointer;
+        resizePointer.Capture(ResizeHandle);
+        e.Handled = true;
+    }
+    private void ResizePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (!ReferenceEquals(resizePointer, e.Pointer)) return;
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            FinishResize();
+            return;
+        }
+        ApplyResize(e.GetPosition(this));
+        e.Handled = true;
+    }
+    private void ResizePointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!ReferenceEquals(resizePointer, e.Pointer) || e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        ApplyResize(e.GetPosition(this));
+        FinishResize();
+        e.Handled = true;
+    }
+    private void ResizePointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
+    {
+        if (ReferenceEquals(resizePointer, e.Pointer)) FinishResize();
+    }
+    private void ApplyResize(Point position)
+    {
+        Vector delta = position - resizeOrigin;
+        Width = Math.Clamp(resizeStartSize.Width + delta.X, MinWidth, MaxWidth);
+        Height = Math.Clamp(resizeStartSize.Height + delta.Y, MinHeight, MaxHeight);
+    }
+    private void FinishResize()
+    {
+        var pointer = resizePointer;
+        resizePointer = null;
+        if (pointer is null) return;
+        if (ReferenceEquals(pointer.Captured, ResizeHandle)) pointer.Capture(null);
+        CaptureBounds();
+        ScheduleSave();
     }
     private void ToggleFloating(object? sender, RoutedEventArgs e) => ViewModel.Floating = !ViewModel.Floating;
     private void ToggleTopmost(object? sender, RoutedEventArgs e) => ViewModel.Topmost = !ViewModel.Topmost;
@@ -278,6 +358,7 @@ public partial class MainWindow : Window
     public void PrepareForShutdown()
     {
         if (exiting) return;
+        FinishResize();
         exiting = true;
         CaptureBounds(); Persist(); settingsWindow?.Close();
     }
