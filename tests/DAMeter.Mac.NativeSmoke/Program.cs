@@ -55,7 +55,7 @@ public sealed class SmokeApplication : Application
                 try
                 {
                     await NativePointerChecks.Run(window);
-                    Console.WriteLine("PASS: AppKit mouse events, real Quartz cursor sampling, repeated native resizes, and native frame bounds.");
+                    Console.WriteLine("PASS: AppKit mouse events, custom diagonal resize cursor, real Quartz cursor sampling, repeated native resizes, and native frame bounds.");
                 }
                 catch (Exception error)
                 {
@@ -110,6 +110,7 @@ internal static class NativePointerChecks
             window.Width = initial.Width;
             window.Height = initial.Height;
             await Settle(window);
+            await VerifyResizeCursor(window, handle, mode);
             for (int repetition = 0; repetition < 6; repetition++)
             {
                 await Drag(window, handle, mode, 45);
@@ -121,6 +122,36 @@ internal static class NativePointerChecks
         if (movesObserved < 100)
             throw new InvalidOperationException($"Native pointer routing did not run enough samples: {movesObserved}.");
         Console.WriteLine($"Observed {movesObserved} routed AppKit drag samples.");
+    }
+
+    private static async Task VerifyResizeCursor(PointerWindow window, Border handle, MeterMode mode)
+    {
+        // Leave the grip first so a previously selected cursor cannot satisfy
+        // this check without routing a new native hover to this meter's grip.
+        window.SyntheticLeftPressed = false;
+        var away = new Point(window.Position.X + window.ClientSize.Width / 2,
+            window.Position.Y + window.ClientSize.Height / 2);
+        NativeInput.Warp(away);
+        NativeInput.Post(window, NativeInput.MouseMoved, away);
+        await Settle(window);
+
+        int hovered = 0;
+        EventHandler<PointerEventArgs> onHover = (_, _) => hovered++;
+        handle.AddHandler(InputElement.PointerMovedEvent, onHover,
+            RoutingStrategies.Bubble, handledEventsToo: true);
+        try
+        {
+            Point local = handle.TranslatePoint(new Point(handle.Bounds.Width / 2, handle.Bounds.Height / 2), window)
+                ?? throw new InvalidOperationException($"{mode}: resize cursor check cannot locate the native grip.");
+            var desktop = new Point(window.Position.X + local.X, window.Position.Y + local.Y);
+            NativeInput.Warp(desktop);
+            NativeInput.Post(window, NativeInput.MouseMoved, desktop);
+            await Settle(window);
+            if (hovered == 0)
+                throw new InvalidOperationException($"{mode}: resize cursor check received no routed native hover on ResizeHandle at {desktop}.");
+            NativeInput.AssertDiagonalResizeCursor($"{mode}: resize grip hover");
+        }
+        finally { handle.RemoveHandler(InputElement.PointerMovedEvent, onHover); }
     }
 
     private static async Task Drag(PointerWindow window, Border handle, MeterMode mode, double widthDelta)
@@ -239,6 +270,26 @@ internal static class NativeInput
     public const nuint MouseDragged = 6;
     private static int eventNumber;
 
+    public static void AssertDiagonalResizeCursor(string context)
+    {
+        nint cursorClass = GetClass("NSCursor");
+        nint current = GetObject(cursorClass, Selector("currentCursor"));
+        if (cursorClass == 0 || current == 0)
+            throw new InvalidOperationException($"{context}: NSCursor.currentCursor is unavailable (class=0x{cursorClass:x}, current=0x{current:x}).");
+        nint crosshair = GetObject(cursorClass, Selector("crosshairCursor"));
+        nint image = GetObject(current, Selector("image"));
+        NativePoint size = image == 0 ? default : GetPointOrSize(image, Selector("size"));
+        NativePoint hotspot = GetPointOrSize(current, Selector("hotSpot"));
+        string nativeClass = Marshal.PtrToStringUTF8(GetClassName(current)) ?? "unknown";
+        string details = $"class={nativeClass}, current=0x{current:x}, crosshair=0x{crosshair:x}, image=0x{image:x}, size={size.X:F3}x{size.Y:F3}, hotspot=({hotspot.X:F3},{hotspot.Y:F3})";
+        if (crosshair == 0 || current == crosshair || image == 0 || !Near(size.X, 32) || !Near(size.Y, 32) ||
+            !Near(hotspot.X, 16) || !Near(hotspot.Y, 16))
+            throw new InvalidOperationException($"{context}: expected a custom diagonal cursor with image 32x32 and hotspot (16,16), distinct from the native crosshair; {details}.");
+        Console.WriteLine($"Verified native diagonal resize cursor: {details}.");
+    }
+
+    private static bool Near(double actual, double expected) => double.IsFinite(actual) && Math.Abs(actual - expected) < 0.01;
+
     public static void Warp(Point desktop)
     {
         int result = CGWarpMouseCursorPosition(new NativePoint(desktop.X, desktop.Y));
@@ -272,12 +323,18 @@ internal static class NativeInput
     private static extern int CGWarpMouseCursorPosition(NativePoint point);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_getClass")]
     private static extern nint GetClass([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "object_getClassName")]
+    private static extern nint GetClassName(nint instance);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "sel_registerName")]
     private static extern nint Selector([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern nint GetObject(nint target, nint selector);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern nint GetInteger(nint target, nint selector);
+    // CGPoint and CGSize both contain two CGFloat doubles. Their 16-byte
+    // floating-point aggregate return uses objc_msgSend on x64 and Apple Silicon.
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
+    private static extern NativePoint GetPointOrSize(nint target, nint selector);
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend")]
     private static extern nint CreateMouseEvent(nint target, nint selector, nuint type, NativePoint location,
         nuint modifierFlags, double timestamp, nint windowNumber, nint context, nint eventNumber, nint clickCount, float pressure);
