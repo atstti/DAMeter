@@ -22,6 +22,7 @@ public sealed class AppSettings
     public WindowBounds NormalBounds { get; set; } = new();
     public WindowBounds FloatingBounds { get; set; } = new() { Width = 500, Height = 220 };
     public bool Floating { get; set; }
+    public bool ShowFloatingBackground { get; set; }
     public double BackgroundOpacity { get; set; } = 0.8;
     public bool Topmost { get; set; }
     public bool ClickThrough { get; set; }

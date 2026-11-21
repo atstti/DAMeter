@@ -18,7 +18,8 @@
                 <MenuItem Header="終了" Click="ExitApplication" />
             </ContextMenu>
         </Grid.ContextMenu>
-        <Border x:Name="Backdrop" Background="#111923" CornerRadius="10" Opacity="{Binding BackgroundOpacity}" />
+        <Border x:Name="Backdrop" Background="#111923" CornerRadius="10" Opacity="{Binding BackgroundOpacity}"
+                IsVisible="{Binding ShowBackdrop}" />
         <Grid RowDefinitions="Auto,Auto,*,Auto">
             <Grid ColumnDefinitions="*,Auto" Background="Transparent" PointerPressed="DragWindow" IsVisible="{Binding Normal}">
                 <StackPanel Orientation="Horizontal" Margin="20,15" Spacing="0">
@@ -42,13 +43,16 @@
                 <Button Content="設定" Command="{Binding SettingsCommand}" Margin="3" />
                 <Button Content="終了" Click="ExitApplication" Margin="3" />
             </WrapPanel>
-            <controls:MeterDisplay x:Name="Meter" Grid.Row="2" Margin="8" PointerPressed="DragWindow" />
+            <controls:MeterDisplay x:Name="Meter" Grid.Row="2" Margin="{Binding MeterMargin}" PointerPressed="DragWindow" />
             <TextBlock Grid.Row="3" Text="{Binding Status}" Foreground="#A6B7C8" Margin="20,8,30,14"
                        TextWrapping="Wrap" IsVisible="{Binding Normal}" />
         </Grid>
-        <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20"
-                Background="#303F4D" Cursor="BottomRightCorner" PointerPressed="ResizeWindow" CornerRadius="0,0,8,0">
-            <TextBlock Text="◢" HorizontalAlignment="Center" Foreground="#A6B7C8" />
+        <Border x:Name="ResizeHandle" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="20" Height="20"
+                Background="Transparent" Cursor="BottomRightCorner" PointerPressed="ResizeWindow"
+                ToolTip.Tip="ドラッグしてサイズ変更">
+            <Border x:Name="ResizeDecoration" Background="#303F4D" CornerRadius="0,0,8,0" IsVisible="{Binding Normal}">
+                <TextBlock Text="◢" HorizontalAlignment="Center" Foreground="#A6B7C8" />
+            </Border>
         </Border>
     </Grid>
 </Window>

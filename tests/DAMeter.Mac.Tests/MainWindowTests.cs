@@ -66,19 +66,34 @@ public sealed class MainWindowTests
         MainWindow window = fixture.Window;
         Button modeButton = FindButton(window, "横型ピーク");
         WrapPanel toolbar = modeButton.GetVisualAncestors().OfType<WrapPanel>().Single();
+        Border backdrop = window.FindControl<Border>("Backdrop")!;
+        Border resizeHandle = window.FindControl<Border>("ResizeHandle")!;
+        Border resizeDecoration = window.FindControl<Border>("ResizeDecoration")!;
+        MeterDisplay meter = window.FindControl<MeterDisplay>("Meter")!;
         Assert.True(toolbar.IsVisible);
+        Assert.True(backdrop.IsVisible);
+        Assert.True(resizeDecoration.IsVisible);
 
         Click(window, FindButton(window, "浮動表示"));
 
         Assert.True(window.ViewModel.Floating);
         Assert.False(toolbar.IsVisible);
-        Assert.True(window.FindControl<MeterDisplay>("Meter")!.IsVisible);
+        Assert.False(backdrop.IsVisible);
+        Assert.False(resizeDecoration.IsVisible);
+        Assert.True(resizeHandle.IsVisible && resizeHandle.IsHitTestVisible);
+        Point corner = resizeHandle.TranslatePoint(new Point(10, 10), window)!.Value;
+        Assert.Same(resizeHandle, window.InputHitTest(corner));
+        Assert.Equal(new Thickness(0), meter.Margin);
+        Assert.True(meter.IsVisible);
 
         window.ReturnToNormal();
         Dispatcher.UIThread.RunJobs();
 
         Assert.False(window.ViewModel.Floating);
         Assert.True(toolbar.IsVisible);
+        Assert.True(backdrop.IsVisible);
+        Assert.True(resizeDecoration.IsVisible);
+        Assert.Equal(new Thickness(8), meter.Margin);
     }
 
     [AvaloniaFact]
@@ -92,6 +107,10 @@ public sealed class MainWindowTests
 
         window.ViewModel.Floating = true;
         Dispatcher.UIThread.RunJobs();
+        Assert.False(backdrop.IsVisible);
+        window.ViewModel.ShowFloatingBackground = true;
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(backdrop.IsVisible);
         Assert.Equal(0.35, backdrop.Opacity, 10);
 
         window.ViewModel.FloatingBackgroundOpacity = 0;
@@ -117,6 +136,12 @@ public sealed class MainWindowTests
             Slider hold = sliders.Single(s => s.Minimum == 0 && s.Maximum == 10);
             Slider decay = sliders.Single(s => s.Minimum == 1 && s.Maximum == 120);
             Slider reference = sliders.Single(s => s.Minimum == -60 && s.Maximum == 0);
+            CheckBox showBackground = settingsWindow.GetVisualDescendants().OfType<CheckBox>()
+                .Single(c => c.Content?.ToString() == "フローティングの周囲の背景を表示");
+            Assert.False(opacity.IsEnabled);
+            showBackground.IsChecked = true;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(opacity.IsEnabled);
             Assert.Equal(0.4, opacity.Value, 10);
             Assert.Equal(2.5, hold.Value, 10);
 
@@ -128,6 +153,7 @@ public sealed class MainWindowTests
             fixture.Window.ViewModel.Save();
 
             AppSettings saved = fixture.Store.Load();
+            Assert.True(saved.ShowFloatingBackground);
             Assert.Equal(0.2, saved.BackgroundOpacity, 10);
             Assert.Equal(3.5, saved.PeakHoldSeconds, 10);
             Assert.Equal(36, saved.DecayDbPerSecond, 10);

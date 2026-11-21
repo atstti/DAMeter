@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Avalonia;
 using Avalonia.Threading;
 using DAMeter.Core;
 using DAMeter.Mac.Audio;
@@ -43,8 +44,34 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand OpenPermissionsCommand { get; }
     public string Status { get => status; set { status = value; Changed(); } }
     public MeterMode Meter { get => Settings.Meter; set { Settings.Meter = value; Changed(); } }
-    public bool Floating { get => Settings.Floating; set { if (Settings.Floating == value) return; Settings.Floating = value; Changed(); Changed(nameof(Normal)); Changed(nameof(BackgroundOpacity)); } }
+    public bool Floating
+    {
+        get => Settings.Floating;
+        set
+        {
+            if (Settings.Floating == value) return;
+            Settings.Floating = value;
+            Changed();
+            Changed(nameof(Normal));
+            Changed(nameof(BackgroundOpacity));
+            Changed(nameof(ShowBackdrop));
+            Changed(nameof(MeterMargin));
+        }
+    }
     public bool Normal => !Floating;
+    public bool ShowFloatingBackground
+    {
+        get => Settings.ShowFloatingBackground;
+        set
+        {
+            if (Settings.ShowFloatingBackground == value) return;
+            Settings.ShowFloatingBackground = value;
+            Changed();
+            Changed(nameof(ShowBackdrop));
+        }
+    }
+    public bool ShowBackdrop => Normal || ShowFloatingBackground;
+    public Thickness MeterMargin => new(Floating ? 0 : 8);
     public bool Topmost { get => Settings.Topmost; set { Settings.Topmost = value; Changed(); } }
     public bool ClickThrough { get => Settings.ClickThrough; set { Settings.ClickThrough = value; Changed(); } }
     public double BackgroundOpacity => Floating ? Settings.BackgroundOpacity : 1;

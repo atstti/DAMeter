@@ -6,8 +6,9 @@
         <StackPanel Margin="24" Spacing="10">
             <TextBlock Text="表示・応答の設定" FontSize="23" Margin="0,0,0,12" />
             <CheckBox Content="常に最前面" IsChecked="{Binding Topmost}" />
+            <CheckBox Content="フローティングの周囲の背景を表示" IsChecked="{Binding ShowFloatingBackground}" />
             <TextBlock Text="フローティング背景の不透明度（0～100%）" />
-            <Slider Minimum="0" Maximum="1" Value="{Binding FloatingBackgroundOpacity}" />
+            <Slider Minimum="0" Maximum="1" Value="{Binding FloatingBackgroundOpacity}" IsEnabled="{Binding ShowFloatingBackground}" />
             <TextBlock Text="{Binding FloatingBackgroundOpacity, StringFormat={}{0:P0}}" />
             <TextBlock Text="ピークホールド（秒）" />
             <Slider Minimum="0" Maximum="10" Value="{Binding PeakHoldSeconds}" />
