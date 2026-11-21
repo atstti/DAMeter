@@ -1,5 +1,13 @@
 # DAMeter Mac版
 
+## 0.1.6：サイズの跳ねと上端の透明な余白を修正
+
+フローティング表示は盤面に合わせた縦横比を保って拡大縮小します。周囲の透明な余白を取り除き、デスクトップ作業領域の上端（メニューバーの下）に盤面を寄せられる構成へ変更しました。VUの説明文は残しています。
+
+右下の角をドラッグすると、横方向・縦方向の動きの両方から拡大縮小量を計算します。Macでは画面上のマウス位置を直接読み、ウィンドウ移動や描画更新で座標が変わってもサイズ計算へ混入させません。ボタンを離すと最後に表示したサイズで操作を終了します。画面の作業領域を超える拡大は制限します。
+
+旧版の設定は、見えていた盤面の位置と大きさを基準に一度だけ変換します。通常表示の位置とサイズは維持します。0.1.6のフローティング最小寸法は縦横比に応じて決まり、0.1.5までの120×120固定とは異なります。音声取得は変更していません。
+
 ## 0.1.5：フローティング中のサイズ変更を見直し
 
 フローティング中は、見えているメーター本体の右下隅へカーソルを合わせてドラッグします。操作領域は、透明な余白を含むウィンドウの隅ではなく、メーターの盤面の隅に配置します。横型ピーク・縦型ピーク・アナログVUの3表示に対応し、表示形式やサイズが変わっても盤面の位置に追従します。
@@ -36,12 +44,12 @@ macOS のシステム音声を表示する Avalonia / .NET 10 アプリです。
 
 ## ダウンロードと起動
 
-**[0.1.5試用版のダウンロードページ](https://github.com/atstti/codex/releases/tag/v0.1.5)** のAssetsから、使用するMacに合ったDMGを選びます。試用版を含む配布一覧は [Releases](https://github.com/atstti/codex/releases) にあります。
+**[0.1.6試用版のダウンロードページ](https://github.com/atstti/codex/releases/tag/v0.1.6)** のAssetsから、使用するMacに合ったDMGを選びます。試用版を含む配布一覧は [Releases](https://github.com/atstti/codex/releases) にあります。
 
-| 使用するMac | 0.1.5のダウンロード |
+| 使用するMac | 0.1.6のダウンロード |
 | --- | --- |
-| Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/codex/releases/download/v0.1.5/DAMeter-osx-arm64.dmg) |
-| Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/codex/releases/download/v0.1.5/DAMeter-osx-x64.dmg) |
+| Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/codex/releases/download/v0.1.6/DAMeter-osx-arm64.dmg) |
+| Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/codex/releases/download/v0.1.6/DAMeter-osx-x64.dmg) |
 
 1. 使用中のDAMeterを⌘Qまたは「終了」で完全終了します。
 2. ダウンロードしたDMGを開き、`DAMeter.app` を「アプリケーション」へドラッグします。旧版がある場合は置き換えます。

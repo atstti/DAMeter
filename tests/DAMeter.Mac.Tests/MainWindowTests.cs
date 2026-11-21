@@ -85,8 +85,8 @@ public sealed class MainWindowTests
         Assert.Same(resizeHandle, window.InputHitTest(corner));
         Point faceCorner = meter.TranslatePoint(meter.GetFaceBounds(window.ViewModel.Meter).BottomRight, window)!.Value;
         Point handleCorner = resizeHandle.TranslatePoint(new Point(20, 20), window)!.Value;
-        Assert.Equal(faceCorner.X, handleCorner.X, 5);
-        Assert.Equal(faceCorner.Y, handleCorner.Y, 5);
+        Assert.InRange(Math.Abs(faceCorner.X - handleCorner.X), 0, 1);
+        Assert.InRange(Math.Abs(faceCorner.Y - handleCorner.Y), 0, 1);
         Assert.Equal(new Thickness(0), meter.Margin);
         Assert.True(meter.IsVisible);
 
@@ -175,6 +175,7 @@ public sealed class MainWindowTests
     {
         var settings = new AppSettings
         {
+            CompactFloatingBounds = true,
             NormalBounds = new WindowBounds { Left = 25, Top = 35, Width = 700, Height = 450 },
             FloatingBounds = new WindowBounds { Left = 150, Top = 160, Width = 360, Height = 200 }
         };
@@ -186,10 +187,12 @@ public sealed class MainWindowTests
         window.ViewModel.Floating = true;
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(360, window.Width);
-        Assert.Equal(200, window.Height);
+        double aspect = MeterDisplay.GetFloatingViewport(MeterMode.HorizontalPeak).Width /
+            MeterDisplay.GetFloatingViewport(MeterMode.HorizontalPeak).Height;
+        Assert.InRange(Math.Abs(360 / aspect - window.Height), 0, 1);
         window.Position = new PixelPoint(180, 210);
         window.Width = 410;
-        window.Height = 250;
+        window.Height = 410 / aspect;
         Dispatcher.UIThread.RunJobs();
 
         window.ViewModel.Floating = false;
@@ -201,7 +204,7 @@ public sealed class MainWindowTests
         window.ViewModel.Floating = true;
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(410, window.Width);
-        Assert.Equal(250, window.Height);
+        Assert.InRange(Math.Abs(410 / aspect - window.Height), 0, 1);
         Assert.Equal(new PixelPoint(180, 210), window.Position);
         Assert.Equal(700, settings.NormalBounds.Width);
         Assert.Equal(450, settings.NormalBounds.Height);

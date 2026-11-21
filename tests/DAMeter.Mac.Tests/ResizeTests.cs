@@ -18,181 +18,210 @@ public sealed class ResizeTests
     [InlineData(MeterMode.HorizontalPeak, 900, 140)]
     [InlineData(MeterMode.VerticalPeak, 240, 600)]
     [InlineData(MeterMode.AnalogVu, 850, 420)]
-    public void RepeatedPointerDragsResizeAfterTheHandleMoves(MeterMode mode, double width, double height)
+    public void RepeatedPointerDragsKeepTheAspectRatioAndReleaseCapture(MeterMode mode, double width, double height)
     {
         using var fixture = new WindowFixture(mode, width, height);
-        for (int iteration = 0; iteration < 4; iteration++)
+        double initialWidth = fixture.Window.Width;
+        double ratio = fixture.Window.Width / fixture.Window.Height;
+        for (int i = 0; i < 4; i++)
         {
-            // The face and its handle move during the gesture. A position
-            // relative to that handle would feed this movement back into sizing.
-            Drag(fixture, new Vector(80, 60), new Vector(40, 30));
-            Drag(fixture, new Vector(-25, -15));
+            Drag(fixture, new Vector(80, 80 / ratio), new Vector(40, 40 / ratio));
+            Drag(fixture, new Vector(-25, -25 / ratio));
         }
-        AssertSize(fixture.Window, width + 60, height + 60);
-        Assert.True(fixture.Window.CanResize);
-        Assert.True(fixture.Window.IsVisible);
+        Assert.InRange(Math.Abs(fixture.Window.Width - initialWidth - 60), 0, 1);
+        AssertTight(fixture);
     }
 
     [AvaloniaFact]
     public void MinimumSizeCanBeReversedAndAnotherGestureStillWorks()
     {
         using var fixture = new WindowFixture(MeterMode.HorizontalPeak, 300, 220);
-        Drag(fixture, new Vector(-500, -500), new Vector(-50, -30));
-        AssertSize(fixture.Window, 250, 190);
-
-        Drag(fixture, new Vector(80, 50));
-        AssertSize(fixture.Window, 330, 240);
+        double ratio = fixture.Window.Width / fixture.Window.Height;
+        Drag(fixture, new Vector(-1000, -1000), new Vector(-50, -50 / ratio));
+        Assert.InRange(Math.Abs(fixture.Window.Width - 250), 0, 1);
+        Drag(fixture, new Vector(80, 80 / ratio));
+        Assert.InRange(Math.Abs(fixture.Window.Width - 330), 0, 1);
+        AssertTight(fixture);
     }
 
     [AvaloniaFact]
-    public void LostPointerCaptureStopsSizingAndAllowsTheNextGesture()
+    public void LostCaptureStopsSizingAndAllowsANewGesture()
     {
         using var fixture = new WindowFixture(MeterMode.HorizontalPeak, 500, 220);
-        Point start = PressHandle(fixture);
-        MoveHeld(fixture.Window, start + new Vector(50, 30));
-        AssertSize(fixture.Window, 550, 250);
-        Assert.NotNull(fixture.LastPointer);
-
-        fixture.LastPointer.Capture(null);
-        Pump();
-        MoveHeld(fixture.Window, start + new Vector(160, 120));
-        AssertSize(fixture.Window, 550, 250);
-        fixture.Window.MouseUp(start + new Vector(160, 120), MouseButton.Left);
-        Pump();
-
-        Drag(fixture, new Vector(25, 20));
-        AssertSize(fixture.Window, 575, 270);
+        Point start = Press(fixture);
+        Move(fixture, start + new Vector(50, 20));
+        Size stopped = fixture.Window.ClientSize;
+        fixture.Pointer!.Capture(null);
+        Move(fixture, start + new Vector(200, 200));
+        Assert.Equal(stopped, fixture.Window.ClientSize);
+        Release(fixture, start + new Vector(200, 200));
+        Drag(fixture, new Vector(30, 10));
+        Assert.True(fixture.Window.Width > stopped.Width);
     }
 
     [AvaloniaFact]
-    public void AResizedFloatingWindowKeepsItsSizeAfterReturningToNormalAndBack()
+    public void WindowOriginChangesCannotResizeAStationaryDesktopPointer()
+    {
+        using var fixture = new WindowFixture(MeterMode.HorizontalPeak, 500, 220);
+        Point start = Press(fixture);
+        Move(fixture, start + new Vector(40, 10));
+        Size before = fixture.Window.ClientSize;
+        fixture.Window.Position = new PixelPoint(-240, 310);
+        Pump();
+        Move(fixture, start + new Vector(40, 10));
+        Assert.Equal(before, fixture.Window.ClientSize);
+        Release(fixture, start + new Vector(40, 10));
+    }
+
+    [AvaloniaFact]
+    public void AQueuedHeldMoveAfterTheRealButtonWasReleasedCannotEnlargeTheWindow()
+    {
+        using var fixture = new WindowFixture(MeterMode.HorizontalPeak, 500, 220);
+        Point start = Press(fixture);
+        Move(fixture, start + new Vector(40, 10));
+        Size before = fixture.Window.ClientSize;
+        fixture.Window.PhysicalLeftPressed = false;
+        Move(fixture, start + new Vector(10000, 10000));
+        Assert.Equal(before, fixture.Window.ClientSize);
+        Assert.Null(fixture.Pointer!.Captured);
+        Release(fixture, start);
+        fixture.Window.PhysicalLeftPressed = true;
+        Drag(fixture, new Vector(20, 5));
+        Assert.True(fixture.Window.Width > before.Width);
+    }
+
+    [AvaloniaFact]
+    public void MouseUpWithStaleLocalCoordinatesCannotMakeAFinalSizeJump()
+    {
+        using var fixture = new WindowFixture(MeterMode.HorizontalPeak, 500, 220);
+        Point start = Press(fixture);
+        Move(fixture, start + new Vector(40, 10));
+        Size before = fixture.Window.ClientSize;
+        fixture.Window.MouseUp(new Point(1500, 1000), MouseButton.Left);
+        Pump();
+        Assert.Equal(before, fixture.Window.ClientSize);
+        Assert.Null(fixture.Pointer!.Captured);
+    }
+
+    [AvaloniaFact]
+    public void FloatingRoundTripKeepsItsScaleAndNormalGeometry()
     {
         using var fixture = new WindowFixture(MeterMode.HorizontalPeak, 360, 200);
-        Drag(fixture, new Vector(100, 70));
-        AssertSize(fixture.Window, 460, 270);
-
-        fixture.Window.ViewModel.Floating = false;
-        Pump();
-        AssertSize(fixture.Window, 700, 450);
-
-        fixture.Window.ViewModel.Floating = true;
-        Pump();
-        AssertSize(fixture.Window, 460, 270);
-        Drag(fixture, new Vector(20, 15));
-        AssertSize(fixture.Window, 480, 285);
-        Assert.Equal(700, fixture.Window.ViewModel.Settings.NormalBounds.Width);
-        Assert.Equal(450, fixture.Window.ViewModel.Settings.NormalBounds.Height);
+        Drag(fixture, new Vector(80, 20));
+        Size floating = fixture.Window.ClientSize;
+        fixture.Window.ViewModel.Floating = false; Pump();
+        Assert.Equal(700, fixture.Window.Width);
+        Assert.Equal(450, fixture.Window.Height);
+        fixture.Window.ViewModel.Floating = true; Pump();
+        Assert.InRange(Math.Abs(fixture.Window.Width - floating.Width), 0, 1);
+        AssertTight(fixture);
+        Drag(fixture, new Vector(20, 5));
+        Assert.True(fixture.Window.Width > floating.Width);
     }
 
     [AvaloniaFact]
-    public void SwitchingMetersRepositionsTheHandleWithoutResizingTheWindow()
+    public void SwitchingModesPreservesScaleAndHasNoInvisibleTopMargin()
     {
         using var fixture = new WindowFixture(MeterMode.HorizontalPeak, 500, 220);
-        MeterDisplay meter = fixture.Window.FindControl<MeterDisplay>("Meter")!;
         foreach (MeterMode mode in new[] { MeterMode.VerticalPeak, MeterMode.AnalogVu, MeterMode.HorizontalPeak })
         {
-            double width = fixture.Window.Bounds.Width;
-            double height = fixture.Window.Bounds.Height;
-            fixture.Window.ViewModel.Meter = mode;
-            Pump();
-            AssertSize(fixture.Window, width, height);
-
-            Point faceCorner = meter.TranslatePoint(meter.GetFaceBounds(mode).BottomRight, fixture.Window)!.Value;
-            Point handleCorner = fixture.Handle.TranslatePoint(
-                new Point(fixture.Handle.Bounds.Width, fixture.Handle.Bounds.Height), fixture.Window)!.Value;
-            // Arranging onto physical pixels can round the painted coordinates.
-            Assert.InRange(Math.Abs(faceCorner.X - handleCorner.X), 0, 1);
-            Assert.InRange(Math.Abs(faceCorner.Y - handleCorner.Y), 0, 1);
-
+            fixture.Window.ViewModel.Meter = mode; Pump();
+            AssertTight(fixture);
+            var work = fixture.Window.Screens.Primary!.WorkingArea;
+            fixture.Window.Position = new PixelPoint(work.X, work.Y); Pump();
+            Assert.InRange(fixture.Meter.GetFaceBounds(mode).Top, 0, 1);
+            Assert.Equal(work.Y, fixture.Window.Position.Y);
             Drag(fixture, new Vector(30, 20));
         }
     }
 
+    [AvaloniaFact]
+    public void LegacyFloatingBoundsLoseTheLetterboxWithoutGrowingTheVisibleMeter()
+    {
+        var settings = new AppSettings { Floating = true,
+            FloatingBounds = new WindowBounds { Left = 100, Top = 100, Width = 500, Height = 220 } };
+        using var fixture = new WindowFixture(settings);
+        Assert.True(settings.CompactFloatingBounds);
+        Assert.InRange(fixture.Window.Width, 488, 490);
+        Assert.InRange(fixture.Window.Height, 128, 130);
+        Assert.Equal(new PixelPoint(105, 145), fixture.Window.Position);
+        AssertTight(fixture);
+    }
+
+    private static void AssertTight(WindowFixture fixture)
+    {
+        var viewport = MeterDisplay.GetFloatingViewport(fixture.Window.ViewModel.Meter);
+        Assert.InRange(Math.Abs(fixture.Window.Width / fixture.Window.Height - viewport.Width / viewport.Height), 0, 0.015);
+        double scale = Math.Min(fixture.Meter.Bounds.Width / viewport.Width, fixture.Meter.Bounds.Height / viewport.Height);
+        double paintedTop = fixture.Meter.GetFaceBounds(fixture.Window.ViewModel.Meter).Top - 0.75 * scale;
+        Assert.InRange(paintedTop, 0, 0.6); // At most half a logical pixel from native layout rounding.
+    }
     private static void Drag(WindowFixture fixture, params Vector[] offsets)
     {
-        double startWidth = fixture.Window.Bounds.Width;
-        double startHeight = fixture.Window.Bounds.Height;
-        Point start = PressHandle(fixture);
-        foreach (Vector offset in offsets)
-        {
-            MoveHeld(fixture.Window, start + offset);
-            AssertSize(fixture.Window,
-                Math.Max(fixture.Window.MinWidth, startWidth + offset.X),
-                Math.Max(fixture.Window.MinHeight, startHeight + offset.Y));
-        }
-        fixture.Window.MouseUp(start + offsets[^1], MouseButton.Left);
-        Pump();
-        Assert.Null(fixture.LastPointer?.Captured);
+        Point start = Press(fixture);
+        foreach (var offset in offsets) Move(fixture, start + offset);
+        Size beforeRelease = fixture.Window.ClientSize;
+        Release(fixture, start + offsets[^1]);
+        Assert.Equal(beforeRelease, fixture.Window.ClientSize);
+        Assert.Null(fixture.Pointer!.Captured);
     }
-
-    private static Point PressHandle(WindowFixture fixture)
+    private static Point Press(WindowFixture fixture)
     {
-        Pump();
-        fixture.Window.MouseMove(new Point(0, 0));
-        Pump();
-        Border handle = fixture.Handle;
-        Point point = handle.TranslatePoint(new Point(handle.Bounds.Width / 2, handle.Bounds.Height / 2), fixture.Window)
-            ?? throw new InvalidOperationException("The resize handle must belong to the visible window.");
-        // Headless pointer input processes pending render/layout work before
-        // hit testing, just as a real pointer event would.
-        fixture.Window.MouseMove(point);
-        Pump();
-        Assert.Same(handle, fixture.Window.InputHitTest(point));
-        fixture.Window.MouseDown(point, MouseButton.Left);
-        Pump();
-        Assert.NotNull(fixture.LastPointer);
-        Assert.Same(handle, fixture.LastPointer.Captured);
-        return point;
+        fixture.Window.MouseMove(new Point(0, 0)); Pump();
+        Point local = fixture.Handle.TranslatePoint(new Point(10, 10), fixture.Window)!.Value;
+        fixture.Window.DesktopPointer = new Point(fixture.Window.Position.X + local.X, fixture.Window.Position.Y + local.Y);
+        fixture.Window.MouseMove(local); Pump();
+        Assert.Same(fixture.Handle, fixture.Window.InputHitTest(local));
+        fixture.Window.MouseDown(local, MouseButton.Left); Pump();
+        Assert.Same(fixture.Handle, fixture.Pointer!.Captured);
+        return fixture.Window.DesktopPointer;
     }
-
-    private static void MoveHeld(MainWindow window, Point point)
+    private static void Move(WindowFixture fixture, Point desktop)
     {
-        window.MouseMove(point, RawInputModifiers.LeftMouseButton);
+        fixture.Window.DesktopPointer = desktop;
+        fixture.Window.MouseMove(new Point(desktop.X - fixture.Window.Position.X, desktop.Y - fixture.Window.Position.Y), RawInputModifiers.LeftMouseButton);
         Pump();
     }
-
-    private static void AssertSize(MainWindow window, double width, double height)
+    private static void Release(WindowFixture fixture, Point desktop)
     {
-        Assert.Equal(width, window.Width, 5);
-        Assert.Equal(height, window.Height, 5);
-        Assert.Equal(width, window.Bounds.Width, 5);
-        Assert.Equal(height, window.Bounds.Height, 5);
+        fixture.Window.MouseUp(new Point(desktop.X - fixture.Window.Position.X, desktop.Y - fixture.Window.Position.Y), MouseButton.Left);
+        Pump();
     }
-
     private static void Pump() => Dispatcher.UIThread.RunJobs();
-
+    private sealed class TestWindow(SettingsStore store, AppSettings settings) : MainWindow(store, settings, smokeTest: true)
+    {
+        public Point DesktopPointer { get; set; }
+        public bool PhysicalLeftPressed { get; set; } = true;
+        protected override Point GetResizeDesktopPosition(PointerEventArgs e) => DesktopPointer;
+        protected override bool IsResizeLeftButtonPressed(PointerEventArgs e) => PhysicalLeftPressed;
+    }
     private sealed class WindowFixture : IDisposable
     {
-        private readonly string directory = Path.Combine(Path.GetTempPath(), $"dameter-resize-tests-{Guid.NewGuid():N}");
-        public MainWindow Window { get; }
+        private readonly string directory = Path.Combine(Path.GetTempPath(), $"dameter-resize-{Guid.NewGuid():N}");
+        public TestWindow Window { get; }
         public Border Handle { get; }
-        public IPointer? LastPointer { get; private set; }
-
-        public WindowFixture(MeterMode mode, double width, double height)
+        public MeterDisplay Meter { get; }
+        public IPointer? Pointer { get; private set; }
+        public WindowFixture(MeterMode mode, double width, double height) : this(new AppSettings
         {
-            var settings = new AppSettings
-            {
-                Floating = true,
-                Meter = mode,
-                NormalBounds = new WindowBounds { Left = 25, Top = 35, Width = 700, Height = 450 },
-                FloatingBounds = new WindowBounds { Left = 100, Top = 100, Width = width, Height = height }
-            };
-            Window = new MainWindow(new SettingsStore(directory), settings, smokeTest: true);
+            CompactFloatingBounds = true, Floating = true, Meter = mode,
+            NormalBounds = new WindowBounds { Left = 25, Top = 35, Width = 700, Height = 450 },
+            FloatingBounds = new WindowBounds { Left = 100, Top = 100, Width = width, Height = height }
+        }) { }
+        public WindowFixture(AppSettings settings)
+        {
+            Window = new TestWindow(new SettingsStore(directory), settings);
             Handle = Window.FindControl<Border>("ResizeHandle")!;
-            Handle.AddHandler(InputElement.PointerPressedEvent, (_, e) => LastPointer = e.Pointer,
-                RoutingStrategies.Tunnel, handledEventsToo: true);
-            Window.Show();
-            Pump();
+            Meter = Window.FindControl<MeterDisplay>("Meter")!;
+            Handle.AddHandler(InputElement.PointerPressedEvent, (_, e) => Pointer = e.Pointer, RoutingStrategies.Tunnel, handledEventsToo: true);
+            Window.Show(); Pump();
         }
-
         public void Dispose()
         {
-            LastPointer?.Capture(null);
+            Pointer?.Capture(null);
             Window.MouseUp(new Point(0, 0), MouseButton.Left);
-            Window.PrepareForShutdown();
-            Window.Close();
-            Pump();
-            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+            Window.PrepareForShutdown(); Window.Close(); Pump();
+            if (Directory.Exists(directory)) Directory.Delete(directory, true);
         }
     }
 }

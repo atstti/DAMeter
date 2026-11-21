@@ -9,6 +9,11 @@ namespace DAMeter.Mac.Controls;
 /// <summary>Draws the latest meter state on the UI thread; never handles audio buffers.</summary>
 public sealed class MeterDisplay : Control
 {
+    public static readonly StyledProperty<bool> CompactProperty =
+        AvaloniaProperty.Register<MeterDisplay, bool>(nameof(Compact));
+    public bool Compact { get => GetValue(CompactProperty); set => SetValue(CompactProperty, value); }
+
+    static MeterDisplay() => AffectsRender<MeterDisplay>(CompactProperty);
     private static readonly IBrush Panel = Brush(25, 29, 35);
     private static readonly IBrush Frame = Brush(47, 55, 65);
     private static readonly IBrush Text = Brush(226, 232, 240);
@@ -73,11 +78,11 @@ public sealed class MeterDisplay : Control
         if (Bounds.Width <= 0 || Bounds.Height <= 0)
             return;
 
-        Size canvas = GetCanvasSize(_mode);
-        double scale = Math.Min(Bounds.Width / canvas.Width, Bounds.Height / canvas.Height);
+        Rect viewport = GetViewport(_mode);
+        double scale = Math.Min(Bounds.Width / viewport.Width, Bounds.Height / viewport.Height);
         using var placement = dc.PushTransform(Matrix.CreateTranslation(
-            (Bounds.Width - canvas.Width * scale) / 2,
-            (Bounds.Height - canvas.Height * scale) / 2));
+            (Bounds.Width - viewport.Width * scale) / 2 - viewport.X * scale,
+            (Bounds.Height - viewport.Height * scale) / 2 - viewport.Y * scale));
         using var scaling = dc.PushTransform(Matrix.CreateScale(scale, scale));
 
         switch (_mode)
@@ -106,22 +111,31 @@ public sealed class MeterDisplay : Control
         if (Bounds.Width <= 0 || Bounds.Height <= 0)
             return default;
 
-        Size canvas = GetCanvasSize(mode);
+        Rect viewport = GetViewport(mode);
         Rect face = mode switch
         {
             MeterMode.AnalogVu => AnalogLeftFace.Union(AnalogRightFace),
             MeterMode.VerticalPeak => VerticalFace,
             _ => HorizontalFace
         };
-        double scale = Math.Min(Bounds.Width / canvas.Width, Bounds.Height / canvas.Height);
+        double scale = Math.Min(Bounds.Width / viewport.Width, Bounds.Height / viewport.Height);
         return new Rect(
-            (Bounds.Width - canvas.Width * scale) / 2 + face.X * scale,
-            (Bounds.Height - canvas.Height * scale) / 2 + face.Y * scale,
+            (Bounds.Width - viewport.Width * scale) / 2 + (face.X - viewport.X) * scale,
+            (Bounds.Height - viewport.Height * scale) / 2 + (face.Y - viewport.Y) * scale,
             face.Width * scale,
             face.Height * scale);
     }
 
-    private static Size GetCanvasSize(MeterMode mode) => mode switch
+    private Rect GetViewport(MeterMode mode) => Compact ? GetFloatingViewport(mode) : new Rect(GetCanvasSize(mode));
+
+    public static Rect GetFloatingViewport(MeterMode mode) => (mode switch
+    {
+        MeterMode.AnalogVu => new Rect(12, 12, 976, 420), // Includes the VU approximation notice.
+        MeterMode.VerticalPeak => VerticalFace,
+        _ => HorizontalFace
+    }).Inflate(0.75); // Keep the outer half of the frame stroke.
+
+    public static Size GetCanvasSize(MeterMode mode) => mode switch
     {
         MeterMode.AnalogVu => new Size(1000, 440),
         MeterMode.VerticalPeak => new Size(320, 540),

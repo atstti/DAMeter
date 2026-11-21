@@ -9,6 +9,23 @@ namespace DAMeter.Mac.Platform;
 /// <summary>Native macOS mouse passthrough and screen-safe window placement.</summary>
 public static class MacWindowInterop
 {
+    public static bool IsLeftButtonPressed() => CoreGraphics.CGEventSourceButtonState(0, 0) != 0;
+    /// <summary>Quartz desktop coordinates; independent of a resizing window's content view.</summary>
+    public static Point GetPointerPosition()
+    {
+        if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException();
+        nint input = CoreGraphics.CGEventCreate(0);
+        if (input == 0) throw new InvalidOperationException("マウス位置を取得できませんでした。");
+        try
+        {
+            var point = CoreGraphics.CGEventGetLocation(input);
+            if (!double.IsFinite(point.X) || !double.IsFinite(point.Y))
+                throw new InvalidOperationException("マウス位置が不正です。");
+            return new Point(point.X, point.Y);
+        }
+        finally { CoreGraphics.CFRelease(input); }
+    }
+
     /// <summary>
     /// Sets NSWindow.ignoresMouseEvents, which passes input through to other apps.
     /// A visible menu-bar recovery action must be registered before enabling this.
@@ -114,5 +131,19 @@ public static class MacWindowInterop
 
         [DllImport(Library, EntryPoint = "objc_msgSend")]
         public static extern byte GetBoolean(nint target, nint selector);
+    }
+
+    private static class CoreGraphics
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        public struct NativePoint { public double X; public double Y; }
+        [DllImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+        public static extern nint CGEventCreate(nint source);
+        [DllImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+        public static extern NativePoint CGEventGetLocation(nint input);
+        [DllImport("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")]
+        public static extern byte CGEventSourceButtonState(int state, uint button);
+        [DllImport("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation")]
+        public static extern void CFRelease(nint value);
     }
 }

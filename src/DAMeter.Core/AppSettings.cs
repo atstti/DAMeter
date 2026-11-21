@@ -23,6 +23,7 @@ public sealed class AppSettings
     public WindowBounds FloatingBounds { get; set; } = new() { Width = 500, Height = 220 };
     public bool Floating { get; set; }
     public bool ShowFloatingBackground { get; set; }
+    public bool CompactFloatingBounds { get; set; }
     public double BackgroundOpacity { get; set; } = 0.8;
     public bool Topmost { get; set; }
     public bool ClickThrough { get; set; }
@@ -39,7 +40,7 @@ public sealed class AppSettings
 
         DeviceId = string.IsNullOrWhiteSpace(DeviceId) ? null : DeviceId;
         NormalBounds = ValidateBounds(NormalBounds, new WindowBounds(), 320, 240);
-        FloatingBounds = ValidateBounds(FloatingBounds, new WindowBounds { Width = 500, Height = 220 }, 120, 120);
+        FloatingBounds = ValidateBounds(FloatingBounds, new WindowBounds { Width = 500, Height = 220 }, 120, CompactFloatingBounds ? 40 : 120);
         BackgroundOpacity = ClampFinite(BackgroundOpacity, 0, 1, 0.8);
         PeakHoldSeconds = ClampFinite(PeakHoldSeconds, 0, 30, 1.5);
         DecayDbPerSecond = ClampFinite(DecayDbPerSecond, 1, 120, 24);

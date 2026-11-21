@@ -42,6 +42,18 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void CompactFloatingSizeSurvivesSavingWithoutRestoringTheOldMinimumHeight()
+    {
+        var store = new SettingsStore(directory);
+        store.Save(new AppSettings { CompactFloatingBounds = true,
+            FloatingBounds = new WindowBounds { Width = 190, Height = 50 } });
+        AppSettings actual = store.Load();
+        Assert.True(actual.CompactFloatingBounds);
+        Assert.Equal(190, actual.FloatingBounds.Width);
+        Assert.Equal(50, actual.FloatingBounds.Height);
+    }
+
+    [Fact]
     public void RepeatedSaveReplacesPreviousJsonAndLeavesNoTemporaryFiles()
     {
         var store = new SettingsStore(directory);

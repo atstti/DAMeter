@@ -3,12 +3,14 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using DAMeter.Core;
 using DAMeter.Mac.Platform;
 using DAMeter.Mac.ViewModels;
 using DAMeter.Mac.Audio;
+using DAMeter.Mac.Controls;
 
 namespace DAMeter.Mac;
 
@@ -25,8 +27,8 @@ public partial class MainWindow : Window
     private bool exiting;
     private bool shutdownRequested;
     private IPointer? resizePointer;
-    private Point resizeOrigin;
-    private Size resizeStartSize;
+    private WindowResizeGesture? resizeGesture;
+    private MeterMode appliedMeter;
     private readonly TaskCompletionSource shutdownCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public bool IsShutdownPrepared => exiting;
     public bool IsShutdownRequested => shutdownRequested || exiting;
@@ -57,6 +59,18 @@ public partial class MainWindow : Window
             if (Program.SmokeTest && !tray.IsAvailable)
                 throw new InvalidOperationException("The native menu-bar recovery icon is unavailable during the quit smoke test.");
         }
+        appliedMeter = settings.Meter;
+        if (!settings.CompactFloatingBounds)
+        {
+            var point = new PixelPoint((int)settings.FloatingBounds.Left, (int)settings.FloatingBounds.Top);
+            double scale = Screens.ScreenFromPoint(point)?.Scaling ?? DesktopScaling;
+            settings.FloatingBounds = FloatingLayout.Migrate(settings.FloatingBounds, settings.Meter, scale);
+            settings.CompactFloatingBounds = true;
+        }
+        Size compact = FloatingLayout.FromWidth(settings.Meter, settings.FloatingBounds.Width,
+            MaximumClientSize(new PixelPoint((int)settings.FloatingBounds.Left, (int)settings.FloatingBounds.Top)));
+        settings.FloatingBounds.Width = compact.Width;
+        settings.FloatingBounds.Height = compact.Height;
         appliedFloating = settings.Floating;
         ApplyBounds(appliedFloating ? settings.FloatingBounds : settings.NormalBounds);
         Topmost = settings.Topmost;
@@ -72,10 +86,13 @@ public partial class MainWindow : Window
                 // lifetime. Only the command-line smoke run animates/exits.
                 if (Program.SmokeTest)
                 {
-                    DispatcherTimer.RunOnce(() => Meter.Update(new MeterBallistics(), MeterMode.AnalogVu), TimeSpan.FromMilliseconds(200));
-                    DispatcherTimer.RunOnce(() => Meter.Update(new MeterBallistics(), MeterMode.VerticalPeak), TimeSpan.FromMilliseconds(400));
                     if (OperatingSystem.IsMacOS()) _ = VerifyNativeAndExitAsync();
-                    else DispatcherTimer.RunOnce(Exit, TimeSpan.FromSeconds(1));
+                    else
+                    {
+                        DispatcherTimer.RunOnce(() => Meter.Update(new MeterBallistics(), MeterMode.AnalogVu), TimeSpan.FromMilliseconds(200));
+                        DispatcherTimer.RunOnce(() => Meter.Update(new MeterBallistics(), MeterMode.VerticalPeak), TimeSpan.FromMilliseconds(400));
+                        DispatcherTimer.RunOnce(Exit, TimeSpan.FromSeconds(1));
+                    }
                 }
             }
             else
@@ -149,7 +166,7 @@ public partial class MainWindow : Window
         try
         {
             await ViewModel.VerifyNativeAsync().ConfigureAwait(false);
-            await Task.Delay(1000).ConfigureAwait(false);
+            await Dispatcher.UIThread.InvokeAsync(VerifyNativeLayoutAsync).ConfigureAwait(false);
         }
         catch (Exception ex) { store.Log(ex); Console.Error.WriteLine(ex); exitCode = 1; }
         Dispatcher.UIThread.Post(() =>
@@ -168,9 +185,46 @@ public partial class MainWindow : Window
             else ExitWithCode(exitCode);
         });
     }
+    private async Task VerifyNativeLayoutAsync()
+    {
+        Dispatcher.UIThread.VerifyAccess();
+        _ = MacWindowInterop.GetPointerPosition(); // Read only; posts no system input.
+        _ = MacWindowInterop.IsLeftButtonPressed();
+        ViewModel.Floating = true;
+        await Task.Delay(100);
+        foreach (MeterMode mode in new[] { MeterMode.HorizontalPeak, MeterMode.VerticalPeak, MeterMode.AnalogVu })
+        {
+            ViewModel.Meter = mode;
+            Meter.Update(new MeterBallistics(), mode);
+            await Task.Delay(100);
+            foreach (double width in new[] { 350.0, 520, 280, 450 })
+            {
+                Size expected = FloatingLayout.FromWidth(mode, width, MaximumClientSize(Position));
+                SetFloatingSize(width);
+                await Task.Delay(100);
+                if (Math.Abs(ClientSize.Width - expected.Width) > 1.5 || Math.Abs(ClientSize.Height - expected.Height) > 1.5)
+                    throw new InvalidOperationException($"Native resize did not settle: {mode}, expected {expected}, actual {ClientSize}.");
+                if (Meter.GetFaceBounds(mode).Top > 1.5)
+                    throw new InvalidOperationException("The native floating meter still has a top letterbox.");
+            }
+        }
+        Screen? screen = Screens.ScreenFromWindow(this) ?? Screens.Primary;
+        if (screen is not null)
+        {
+            Position = new PixelPoint(screen.WorkingArea.X + 2, screen.WorkingArea.Y + 2);
+            await Task.Delay(100);
+            if (Position.Y > screen.WorkingArea.Y + 4)
+                throw new InvalidOperationException("The native floating window cannot reach the top of its desktop working area.");
+        }
+        ViewModel.Floating = false;
+        await Task.Delay(100);
+        Console.WriteLine("Verified native desktop pointer access, 12 compact window resizes, and top-edge placement without capture permission.");
+    }
     private void ScreensChanged(object? sender, EventArgs e)
     {
         if (exiting) return;
+        FinishResize();
+        if (appliedFloating) SetFloatingSize(Width);
         MacWindowInterop.EnsureVisible(this);
         Dispatcher.UIThread.Post(() => { CaptureBounds(); ScheduleSave(); }, DispatcherPriority.Loaded);
     }
@@ -194,7 +248,23 @@ public partial class MainWindow : Window
             Dispatcher.UIThread.Post(() => { CaptureBounds(); ScheduleSave(); }, DispatcherPriority.Loaded);
         }
         else if (e.PropertyName == nameof(MainViewModel.Topmost)) Topmost = ViewModel.Topmost;
-        else if (e.PropertyName == nameof(MainViewModel.Meter)) UpdateResizeHandle(this, EventArgs.Empty);
+        else if (e.PropertyName == nameof(MainViewModel.Meter))
+        {
+            FinishResize();
+            CaptureBounds();
+            double scale = ViewModel.Settings.FloatingBounds.Width / MeterDisplay.GetFloatingViewport(appliedMeter).Width;
+            appliedMeter = ViewModel.Meter;
+            Rect viewport = MeterDisplay.GetFloatingViewport(appliedMeter);
+            Size size = FloatingLayout.FromWidth(appliedMeter, viewport.Width * scale, MaximumClientSize(Position));
+            ViewModel.Settings.FloatingBounds.Width = size.Width;
+            ViewModel.Settings.FloatingBounds.Height = size.Height;
+            if (appliedFloating)
+            {
+                ApplyBounds(ViewModel.Settings.FloatingBounds);
+                MacWindowInterop.EnsureVisible(this);
+            }
+            UpdateResizeHandle(this, EventArgs.Empty);
+        }
         else if (e.PropertyName == nameof(MainViewModel.ClickThrough))
         {
             FinishResize();
@@ -227,12 +297,30 @@ public partial class MainWindow : Window
         bool previous = applyingBounds; applyingBounds = true;
         try
         {
-            MinWidth = appliedFloating ? 120 : 420;
-            MinHeight = appliedFloating ? 120 : 300;
+            Size minimum = appliedFloating ? FloatingLayout.Minimum(ViewModel.Meter) : new Size(420, 300);
+            MinWidth = minimum.Width;
+            MinHeight = minimum.Height;
             Position = new PixelPoint((int)bounds.Left, (int)bounds.Top);
-            Width = Math.Max(MinWidth, bounds.Width); Height = Math.Max(MinHeight, bounds.Height);
+            if (appliedFloating) SetFloatingSize(bounds.Width);
+            else { Width = Math.Max(MinWidth, bounds.Width); Height = Math.Max(MinHeight, bounds.Height); }
         }
         finally { applyingBounds = previous; }
+    }
+    private Size MaximumClientSize(PixelPoint position, bool fromAnchor = false)
+    {
+        Screen? screen = Screens.ScreenFromPoint(position) ?? Screens.Primary;
+        if (screen is null) return new Size(16384, 16384);
+        double scale = screen.Scaling;
+        var work = screen.WorkingArea;
+        double width = fromAnchor ? work.Right - Math.Max(work.X, position.X) : work.Width;
+        double height = fromAnchor ? work.Bottom - Math.Max(work.Y, position.Y) : work.Height;
+        return new Size(Math.Max(1, Math.Min(MaxWidth, width / scale)), Math.Max(1, Math.Min(MaxHeight, height / scale)));
+    }
+    private void SetFloatingSize(double width)
+    {
+        Size size = FloatingLayout.FromWidth(ViewModel.Meter, width, MaximumClientSize(Position));
+        Width = size.Width;
+        Height = size.Height;
     }
     private void CaptureBounds()
     {
@@ -291,13 +379,20 @@ public partial class MainWindow : Window
     private void ResizeWindow(object? sender, PointerPressedEventArgs e)
     {
         if (!CanResize || WindowState != WindowState.Normal || ViewModel.ClickThrough ||
-            !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+            !IsResizeLeftButtonPressed(e)) return;
         FinishResize();
-        // Avalonia.Native's macOS BeginResizeDrag is a no-op. Capture input and
-        // calculate each size from the gesture origin in window-local DIPs.
-        // Handle-local deltas feed back when layout moves the grip itself.
-        resizeOrigin = e.GetPosition(this);
-        resizeStartSize = new Size(Bounds.Width, Bounds.Height);
+        // Read desktop coordinates directly on macOS. A queued event's local
+        // coordinates can refer to the content view before its latest resize.
+        Point? origin = ReadResizePointer(e);
+        if (origin is null) return;
+        Size start = ClientSize;
+        if (ViewModel.Floating)
+        {
+            Rect viewport = MeterDisplay.GetFloatingViewport(ViewModel.Meter);
+            start = new Size(start.Width, start.Width * viewport.Height / viewport.Width);
+        }
+        resizeGesture = new WindowResizeGesture(origin.Value, start, DesktopScaling,
+            new Size(MinWidth, MinHeight), MaximumClientSize(Position, fromAnchor: true), ViewModel.Floating);
         resizePointer = e.Pointer;
         resizePointer.Capture(ResizeHandle);
         e.Handled = true;
@@ -305,18 +400,23 @@ public partial class MainWindow : Window
     private void ResizePointerMoved(object? sender, PointerEventArgs e)
     {
         if (!ReferenceEquals(resizePointer, e.Pointer)) return;
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        if (!IsResizeLeftButtonPressed(e))
         {
             FinishResize();
             return;
         }
-        ApplyResize(e.GetPosition(this));
+        Point? position = ReadResizePointer(e);
+        if (position is null) return;
+        Size size = resizeGesture!.GetSize(position.Value);
+        Width = size.Width;
+        Height = size.Height;
         e.Handled = true;
     }
     private void ResizePointerReleased(object? sender, PointerReleasedEventArgs e)
     {
         if (!ReferenceEquals(resizePointer, e.Pointer) || e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        ApplyResize(e.GetPosition(this));
+        // Finish at the last drag sample. Reinterpreting MouseUp in a newly
+        // resized native view was another source of an end-of-drag jump.
         FinishResize();
         e.Handled = true;
     }
@@ -324,16 +424,25 @@ public partial class MainWindow : Window
     {
         if (ReferenceEquals(resizePointer, e.Pointer)) FinishResize();
     }
-    private void ApplyResize(Point position)
+    protected virtual Point GetResizeDesktopPosition(PointerEventArgs e)
     {
-        Vector delta = position - resizeOrigin;
-        Width = Math.Clamp(resizeStartSize.Width + delta.X, MinWidth, MaxWidth);
-        Height = Math.Clamp(resizeStartSize.Height + delta.Y, MinHeight, MaxHeight);
+        if (OperatingSystem.IsMacOS() && !smokeTest) return MacWindowInterop.GetPointerPosition();
+        PixelPoint point = this.PointToScreen(e.GetPosition(this));
+        return new Point(point.X, point.Y);
+    }
+    protected virtual bool IsResizeLeftButtonPressed(PointerEventArgs e) =>
+        OperatingSystem.IsMacOS() && !smokeTest ? MacWindowInterop.IsLeftButtonPressed() :
+        e.GetCurrentPoint(this).Properties.IsLeftButtonPressed;
+    private Point? ReadResizePointer(PointerEventArgs e)
+    {
+        try { return GetResizeDesktopPosition(e); }
+        catch (Exception ex) { store.Log(ex); FinishResize(); return null; }
     }
     private void FinishResize()
     {
         var pointer = resizePointer;
         resizePointer = null;
+        resizeGesture = null;
         if (pointer is null) return;
         if (ReferenceEquals(pointer.Captured, ResizeHandle)) pointer.Capture(null);
         CaptureBounds();
