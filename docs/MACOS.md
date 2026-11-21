@@ -28,7 +28,7 @@ macOS のシステム音声を表示する Avalonia / .NET 10 アプリです。
 
 ## ダウンロードと起動
 
-0.1.4の配布ビルドは [Actions → Build macOS](https://github.com/atstti/codex/actions/workflows/macos.yml) で確認できます。現在はCIでの検証待ちです。成功した0.1.4の実行から、以下の手順で取得してください。Artifactsの保存期間は30日です。
+**[Apple Silicon向け0.1.4をダウンロード](https://github.com/atstti/codex/actions/runs/44897497586/artifacts/14704613068)**（2026年11月21日作成、GitHubへのログインが必要です）。ZIPを展開し、中の `DAMeter-osx-arm64.dmg` を開いてインストールしてください。Artifactsの保存期間は30日です。期限切れの場合は [Actions → Build macOS](https://github.com/atstti/codex/actions/workflows/macos.yml) から新しいビルドを取得します。
 
 1. GitHub のリポジトリで **Actions → Build macOS** を開き、成功した実行を選びます。
 2. **Artifacts** から、自分のCPUに合った `DAMeter-osx-arm64` または `DAMeter-osx-x64` をダウンロードします。
