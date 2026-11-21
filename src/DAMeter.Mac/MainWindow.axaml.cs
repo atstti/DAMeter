@@ -65,10 +65,15 @@ public partial class MainWindow : Window
             {
                 ViewModel.Status = "UI smoke test: no audio capture or permission request";
                 Meter.Update(new MeterBallistics(), ViewModel.Meter);
-                DispatcherTimer.RunOnce(() => Meter.Update(new MeterBallistics(), MeterMode.AnalogVu), TimeSpan.FromMilliseconds(200));
-                DispatcherTimer.RunOnce(() => Meter.Update(new MeterBallistics(), MeterMode.VerticalPeak), TimeSpan.FromMilliseconds(400));
-                if (Program.SmokeTest && OperatingSystem.IsMacOS()) _ = VerifyNativeAndExitAsync();
-                else DispatcherTimer.RunOnce(Exit, TimeSpan.FromSeconds(1));
+                // Unit tests also suppress capture, but own their window's
+                // lifetime. Only the command-line smoke run animates/exits.
+                if (Program.SmokeTest)
+                {
+                    DispatcherTimer.RunOnce(() => Meter.Update(new MeterBallistics(), MeterMode.AnalogVu), TimeSpan.FromMilliseconds(200));
+                    DispatcherTimer.RunOnce(() => Meter.Update(new MeterBallistics(), MeterMode.VerticalPeak), TimeSpan.FromMilliseconds(400));
+                    if (OperatingSystem.IsMacOS()) _ = VerifyNativeAndExitAsync();
+                    else DispatcherTimer.RunOnce(Exit, TimeSpan.FromSeconds(1));
+                }
             }
             else
             {

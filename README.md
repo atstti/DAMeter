@@ -23,7 +23,7 @@ Windows 10 / 11（64bit）で再生中のシステム音声を表示する、C# 
 
 ## 起動と使い方
 
-開発には `global.json` の .NET SDK **10.0.403** を使用します。同じ feature band の新しいパッチも許可します。WPF を起動するには Windows 10 / 11 x64 が必要です。Visual Studio を使う場合は .NET 10 と WPF をサポートする版で `DAMeter.slnx` を開いてください。
+開発には `global.json` で固定した .NET SDK **10.0.403** を使用します。配布用のロックファイルと一致させるため、新しいSDKを使う場合はSDK指定とロックファイルを合わせて更新してください。WPF を起動するには Windows 10 / 11 x64 が必要です。Visual Studio を使う場合は .NET 10 と WPF をサポートする版で `DAMeter.slnx` を開いてください。
 
 リポジトリのルートで実行します。
 
