@@ -4,7 +4,9 @@
 
 独自Bitmapカーソルを取り除いて `BottomRightCorner` を復元し、ネイティブ検証も実ホバー後の `NSCursor.currentCursor` が当初と同じ `NSCursor.crosshairCursor` であることを確認する形に戻しました。3表示での拡縮・移動の反復検証は維持します。
 
-見た目のマークだけを14×14へ小さくし、入力領域は20×20を維持します。Linuxで既存のMac回帰テスト72件が成功しました。実表示のマーク位置と、両Mac CPUでの標準カーソルも確認し、CIの結果を検証完了後に記録します。
+見た目のマークだけを14×14へ小さくし、入力領域は20×20を維持します。Linuxで既存のMac回帰テスト72件が成功し、3表示の画像出力で小型マークの位置を確認しました。ソース `ed5d82d` の [Mac CI](https://github.com/atstti/codex/actions/runs/44957977475) はApple Silicon・Intelともに成功しました。実際のホバー入力後のカーソルが当初の標準カーソルであること、拡縮と上端への移動を反復しても操作できることを確認しています。[Windows CI](https://github.com/atstti/codex/actions/runs/44957977458) も成功しました。
+
+[0.1.9公開CI](https://github.com/atstti/codex/actions/runs/44958493760) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42,033,857バイト）を匿名ダウンロードして、公開SHA-256と一致することを確認しました。
 
 ## Mac版0.1.8：サイズ変更カーソルと常時表示マーク
 
