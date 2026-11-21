@@ -126,6 +126,15 @@ public sealed class MeterDisplay : Control
             face.Height * scale);
     }
 
+    public Rect GetPaintedFaceBounds(MeterMode mode)
+    {
+        Rect face = GetFaceBounds(mode);
+        if (face.Width <= 0 || face.Height <= 0) return default;
+        Rect viewport = GetViewport(mode);
+        double scale = Math.Min(Bounds.Width / viewport.Width, Bounds.Height / viewport.Height);
+        return face.Inflate(FramePen.Thickness * scale / 2);
+    }
+
     private Rect GetViewport(MeterMode mode) => Compact ? GetFloatingViewport(mode) : new Rect(GetCanvasSize(mode));
 
     public static Rect GetFloatingViewport(MeterMode mode) => (mode switch

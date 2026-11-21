@@ -13,6 +13,16 @@ namespace DAMeter.Mac.Tests;
 
 public sealed class ResizeTests
 {
+    [AvaloniaFact]
+    public void TheOuterFrameStrokeIsNotMistakenForATransparentTopMargin()
+    {
+        var meter = new MeterDisplay { Compact = true };
+        meter.Measure(new Size(520, 905));
+        meter.Arrange(new Rect(0, 0, 520, 905));
+        Assert.True(meter.GetFaceBounds(MeterMode.VerticalPeak).Top > 1.5);
+        Assert.InRange(meter.GetPaintedFaceBounds(MeterMode.VerticalPeak).Top, 0, 0.5);
+    }
+
     [AvaloniaTheory]
     [InlineData(MeterMode.HorizontalPeak, 500, 220)]
     [InlineData(MeterMode.HorizontalPeak, 900, 140)]

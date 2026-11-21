@@ -210,10 +210,11 @@ public partial class MainWindow : Window
                     bool sizeReady = Math.Abs(ClientSize.Width - expected.Width) <= 1.5 &&
                         Math.Abs(ClientSize.Height - expected.Height) <= 1.5;
                     bool layoutReady = Meter.Compact && Math.Abs(Meter.Bounds.Width - ClientSize.Width) <= 1.5 &&
-                        Math.Abs(Meter.Bounds.Height - ClientSize.Height) <= 1.5 && Meter.GetFaceBounds(mode).Top <= 1.5;
+                        Math.Abs(Meter.Bounds.Height - ClientSize.Height) <= 1.5 &&
+                        Math.Abs(Meter.GetPaintedFaceBounds(mode).Top) <= 1 / RenderScaling;
                     if (sizeReady && layoutReady) break;
                     if (deadline.Elapsed > TimeSpan.FromSeconds(3))
-                        throw new InvalidOperationException($"Native layout did not settle: mode={mode}, expected={expected}, client={ClientSize}, meter={Meter.Bounds}, face={Meter.GetFaceBounds(mode)}, compact={Meter.Compact}.");
+                        throw new InvalidOperationException($"Native layout did not settle: mode={mode}, expected={expected}, client={ClientSize}, meter={Meter.Bounds}, painted={Meter.GetPaintedFaceBounds(mode)}, compact={Meter.Compact}.");
                     await Task.Delay(25);
                 }
             }
