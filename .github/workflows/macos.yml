@@ -37,7 +37,29 @@ jobs:
       - name: Restore Mac UI and transport tests
         run: dotnet restore tests/DAMeter.Mac.Tests/DAMeter.Mac.Tests.csproj --locked-mode
       - name: Test Mac UI bindings and audio lifecycle
-        run: dotnet test tests/DAMeter.Mac.Tests/DAMeter.Mac.Tests.csproj --configuration Release --no-restore --logger 'trx;LogFileName=mac-tests.trx' --results-directory artifacts/test-results
+        run: |
+          mkdir -p artifacts
+          status=0
+          dotnet test tests/DAMeter.Mac.Tests/DAMeter.Mac.Tests.csproj --configuration Release --no-restore --logger 'trx;LogFileName=mac-tests.trx' --results-directory artifacts/test-results > artifacts/mac-tests.log 2>&1 || status=$?
+          cat artifacts/mac-tests.log
+          if [[ "$status" != 0 ]]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          results = Path('artifacts/test-results/mac-tests.trx')
+          failures = ET.parse(results).findall(".//{*}UnitTestResult[@outcome='Failed']") if results.exists() else []
+          def annotation(title, message):
+              message = message[:6000].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title={title}::{message}')
+          for failure in failures:
+              message = failure.findtext('./{*}Output/{*}ErrorInfo/{*}Message', default='Test failed')
+              stack = failure.findtext('./{*}Output/{*}ErrorInfo/{*}StackTrace', default='')
+              annotation(failure.get('testName', 'Mac test failed'), message + '\n' + stack)
+          if not failures:
+              annotation('Mac tests failed', '\n'.join(Path('artifacts/mac-tests.log').read_text(errors='replace').splitlines()[-40:]))
+          PY
+          fi
+          exit "$status"
       - name: Publish, verify signatures, and smoke test Mac application
         run: |
           status=0
