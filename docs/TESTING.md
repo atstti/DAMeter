@@ -4,7 +4,9 @@
 
 右下のカーソルを `Arrow` に変更しました。ネイティブ検証は実ホバー後に `NSCursor.currentCursor == NSCursor.arrowCursor` かつ十字と異なることを確認します。受け入れ済みの14×14マークと20×20の入力領域は変更していません。
 
-Mac配布検証へ、ICNSのデコード・サイズ検証と、`NSWorkspace.shared.icon(forFile:)` で対象バンドルから取得したアイコンがDAMeterのアイコンであることの検証を追加します。権限一覧の古いアイコン表示を修復できたとはまだ確認していません。実行結果はCI完了後に記録します。
+Mac配布検証へ、ICNSのデコード・サイズ検証と、`NSWorkspace.shared.icon(forFile:)` で対象バンドルから取得したアイコンがDAMeterのアイコンであることの検証を追加します。ソース `4fa14f2` の [Mac CI](https://github.com/atstti/codex/actions/runs/44960578144) はApple Silicon・Intelの両方で成功しました。3表示で通常の矢印カーソルが選択されることに加え、ICNSの各サイズと、macOSがバンドルから取得するアイコンがDAMeterのアイコンであることを確認しました。[Windows CI](https://github.com/atstti/codex/actions/runs/44960578176) も成功しました。ユーザーの権限一覧では、システム設定の再起動とDAMeterの削除・再追加では戻りませんでしたが、`lsregister -f /Applications/DAMeter.app` とシステム設定の開き直しにより、DAMeterのアイコンに戻ったとの確認を得ました。配布ファイルの変更ではなく、ユーザーのMacのアプリ登録情報の更新で復旧したケースです。
+
+[0.1.10公開CI](https://github.com/atstti/codex/actions/runs/44961151487) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42032712バイト）を匿名ダウンロードして、公開SHA-256と一致することを検証しました。
 
 ## Mac版0.1.9：標準カーソルと小型マーク
 
