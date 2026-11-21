@@ -79,7 +79,7 @@ public sealed class MainWindowTests
         Assert.True(window.ViewModel.Floating);
         Assert.False(toolbar.IsVisible);
         Assert.False(backdrop.IsVisible);
-        Assert.False(resizeDecoration.IsVisible);
+        Assert.True(resizeDecoration.IsVisible);
         Assert.True(resizeHandle.IsVisible && resizeHandle.IsHitTestVisible);
         Point corner = resizeHandle.TranslatePoint(new Point(10, 10), window)!.Value;
         Assert.Same(resizeHandle, window.InputHitTest(corner));
