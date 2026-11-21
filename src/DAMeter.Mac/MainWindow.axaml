@@ -43,7 +43,9 @@
                 <Button Content="設定" Command="{Binding SettingsCommand}" Margin="3" />
                 <Button Content="終了" Click="ExitApplication" Margin="3" />
             </WrapPanel>
-            <controls:MeterDisplay x:Name="Meter" Grid.Row="2" Margin="{Binding MeterMargin}" Compact="{Binding Floating}" PointerPressed="DragWindow" />
+            <controls:MeterDisplay x:Name="Meter" Grid.Row="2" Margin="{Binding MeterMargin}" Compact="{Binding Floating}"
+                                   PointerPressed="DragWindow" PointerMoved="MovePointerMoved" PointerReleased="MovePointerReleased"
+                                   PointerCaptureLost="MovePointerCaptureLost" />
             <TextBlock Grid.Row="3" Text="{Binding Status}" Foreground="#A6B7C8" Margin="20,8,30,14"
                        TextWrapping="Wrap" IsVisible="{Binding Normal}" />
         </Grid>

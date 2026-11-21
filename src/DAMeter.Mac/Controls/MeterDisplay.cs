@@ -78,6 +78,11 @@ public sealed class MeterDisplay : Control
         if (Bounds.Width <= 0 || Bounds.Height <= 0)
             return;
 
+        // Keep the floating meter's drag surface continuous, including the gap
+        // between the two VU faces. A transparent drawing participates in input
+        // hit testing without adding a visible background.
+        if (Compact) dc.DrawRectangle(Brushes.Transparent, null, new Rect(Bounds.Size));
+
         Rect viewport = GetViewport(_mode);
         double scale = Math.Min(Bounds.Width / viewport.Width, Bounds.Height / viewport.Height);
         using var placement = dc.PushTransform(Matrix.CreateTranslation(

@@ -13,6 +13,33 @@ namespace DAMeter.Mac.Tests;
 
 public sealed class ResizeTests
 {
+    [AvaloniaTheory]
+    [InlineData(MeterMode.HorizontalPeak)]
+    [InlineData(MeterMode.VerticalPeak)]
+    [InlineData(MeterMode.AnalogVu)]
+    public void MovingToTheTopAfterRepeatedResizesDoesNotChangeTheMeterSize(MeterMode mode)
+    {
+        using var fixture = new WindowFixture(mode, 400, 200);
+        for (int repetition = 0; repetition < 4; repetition++)
+        {
+            Drag(fixture, new Vector(30, 10));
+            Size beforeMove = fixture.Window.ClientSize;
+            Point local = fixture.Meter.TranslatePoint(new Point(fixture.Meter.Bounds.Width / 2,
+                fixture.Meter.Bounds.Height / 2), fixture.Window)!.Value;
+            fixture.Window.DesktopPointer = new Point(fixture.Window.Position.X + local.X, fixture.Window.Position.Y + local.Y);
+            fixture.Window.MouseDown(local, MouseButton.Left); Pump();
+            Assert.Same(fixture.Meter, fixture.Pointer!.Captured);
+            var work = fixture.Window.Screens.Primary!.WorkingArea;
+            Point aboveTop = new(fixture.Window.DesktopPointer.X, work.Y - 200);
+            Move(fixture, aboveTop);
+            Assert.Equal(work.Y, fixture.Window.Position.Y);
+            Assert.Equal(beforeMove, fixture.Window.ClientSize);
+            Release(fixture, aboveTop);
+            Assert.Null(fixture.Pointer.Captured);
+            AssertTight(fixture);
+        }
+    }
+
     [AvaloniaFact]
     public void TheOuterFrameStrokeIsNotMistakenForATransparentTopMargin()
     {
@@ -224,6 +251,7 @@ public sealed class ResizeTests
             Handle = Window.FindControl<Border>("ResizeHandle")!;
             Meter = Window.FindControl<MeterDisplay>("Meter")!;
             Handle.AddHandler(InputElement.PointerPressedEvent, (_, e) => Pointer = e.Pointer, RoutingStrategies.Tunnel, handledEventsToo: true);
+            Meter.AddHandler(InputElement.PointerPressedEvent, (_, e) => Pointer = e.Pointer, RoutingStrategies.Tunnel, handledEventsToo: true);
             Window.Show(); Pump();
         }
         public void Dispose()

@@ -67,12 +67,17 @@ public static class MacWindowInterop
         if (window.WindowState != WindowState.Normal)
             return;
 
+        // Width/Height may have just changed during a mode or screen switch.
+        // Never combine an old layout Bounds with a new native FrameSize: that
+        // incorrectly turns pending content size into invisible frame margins.
+        window.UpdateLayout();
+
         var screens = window.Screens.All.Where(s => s.WorkingArea.Width > 0 && s.WorkingArea.Height > 0).ToArray();
         if (screens.Length == 0)
             return;
 
-        double width = PositiveFinite(window.Bounds.Width, PositiveFinite(window.Width, 960));
-        double height = PositiveFinite(window.Bounds.Height, PositiveFinite(window.Height, 640));
+        double width = PositiveFinite(window.ClientSize.Width, PositiveFinite(window.Width, 960));
+        double height = PositiveFinite(window.ClientSize.Height, PositiveFinite(window.Height, 640));
         double currentScale = PositiveFinite(window.Screens.ScreenFromWindow(window)?.Scaling ?? 1, 1);
         var frame = window.FrameSize ?? new Size(width, height);
         double frameExtraWidth = Math.Max(0, frame.Width - width);

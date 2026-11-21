@@ -31,17 +31,21 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ToggleFloatingCommand = new RelayCommand(_ => Floating = !Floating);
         SettingsCommand = new RelayCommand(_ => OpenSettingsRequested?.Invoke());
         OpenPermissionsCommand = new RelayCommand(_ => OpenPermissionsRequested?.Invoke());
+        OpenDiagnosticsCommand = new RelayCommand(_ => OpenDiagnosticsRequested?.Invoke());
     }
     public AppSettings Settings { get; }
     public event PropertyChangedEventHandler? PropertyChanged;
     public event Action<MeterBallistics, MeterMode>? FrameReady;
     public event Action? OpenSettingsRequested;
     public event Action? OpenPermissionsRequested;
+    public event Action? OpenDiagnosticsRequested;
     public ICommand SelectMeterCommand { get; }
     public ICommand RetryCommand { get; }
     public ICommand ToggleFloatingCommand { get; }
     public ICommand SettingsCommand { get; }
     public ICommand OpenPermissionsCommand { get; }
+    public ICommand OpenDiagnosticsCommand { get; }
+    public string VersionLabel => $"DAMeter {typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)}";
     public string Status { get => status; set { status = value; Changed(); } }
     public MeterMode Meter { get => Settings.Meter; set { Settings.Meter = value; Changed(); } }
     public bool Floating

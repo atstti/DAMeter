@@ -5,6 +5,7 @@
     <AssemblyName>DAMeter.Mac</AssemblyName>
     <RootNamespace>DAMeter.Mac</RootNamespace>
     <ApplicationTitle>DAMeter</ApplicationTitle>
+    <Version>0.1.7</Version>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>

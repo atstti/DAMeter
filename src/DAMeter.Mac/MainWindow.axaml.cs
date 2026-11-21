@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     private bool shutdownRequested;
     private IPointer? resizePointer;
     private WindowResizeGesture? resizeGesture;
+    private readonly WindowInteractionLog? interactionLog;
     private MeterMode appliedMeter;
     private readonly TaskCompletionSource shutdownCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public bool IsShutdownPrepared => exiting;
@@ -43,12 +44,17 @@ public partial class MainWindow : Window
         InitializeComponent();
         this.store = store;
         this.smokeTest = smokeTest;
+        if (!smokeTest)
+            interactionLog = new WindowInteractionLog(this,
+                typeof(MainWindow).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                    .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "unknown");
         ViewModel = new MainViewModel(store, settings, audio);
         DataContext = ViewModel;
         Icon = new WindowIcon(Avalonia.Platform.AssetLoader.Open(new Uri("avares://DAMeter.Mac/Assets/dameter.png")));
         ViewModel.FrameReady += (state, mode) => { if (IsVisible) Meter.Update(state, mode); };
         ViewModel.OpenSettingsRequested += OpenSettings;
         ViewModel.OpenPermissionsRequested += OpenPermissions;
+        ViewModel.OpenDiagnosticsRequested += OpenDiagnostics;
         ViewModel.PropertyChanged += SettingsChanged;
         saveTimer.Tick += (_, _) => Persist();
         if (!smokeTest || (Program.SmokeTest && OperatingSystem.IsMacOS()))
@@ -72,6 +78,7 @@ public partial class MainWindow : Window
         settings.FloatingBounds.Width = compact.Width;
         settings.FloatingBounds.Height = compact.Height;
         appliedFloating = settings.Floating;
+        CanMaximize = !appliedFloating;
         ApplyBounds(appliedFloating ? settings.FloatingBounds : settings.NormalBounds);
         Topmost = settings.Topmost;
         Opened += (_, _) =>
@@ -120,7 +127,7 @@ public partial class MainWindow : Window
         };
         Closed += (_, _) =>
         {
-            FinishResize();
+            FinishInteractions();
             saveTimer.Stop();
             LayoutUpdated -= UpdateResizeHandle;
             Screens.Changed -= ScreensChanged;
@@ -131,7 +138,7 @@ public partial class MainWindow : Window
         PositionChanged += (_, _) => GeometryChanged();
         SizeChanged += (_, _) => GeometryChanged();
         LayoutUpdated += UpdateResizeHandle;
-        Deactivated += (_, _) => FinishResize();
+        Deactivated += (_, _) => FinishInteractions();
         Screens.Changed += ScreensChanged;
     }
 
@@ -156,6 +163,7 @@ public partial class MainWindow : Window
 
     private void GeometryChanged()
     {
+        interactionLog?.Record("geometry");
         if (!opened || applyingBounds || WindowState != WindowState.Normal) return;
         CaptureBounds();
         ScheduleSave();
@@ -234,7 +242,7 @@ public partial class MainWindow : Window
     private void ScreensChanged(object? sender, EventArgs e)
     {
         if (exiting) return;
-        FinishResize();
+        FinishInteractions();
         if (appliedFloating) SetFloatingSize(Width);
         MacWindowInterop.EnsureVisible(this);
         Dispatcher.UIThread.Post(() => { CaptureBounds(); ScheduleSave(); }, DispatcherPriority.Loaded);
@@ -243,12 +251,13 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainViewModel.Floating))
         {
-            FinishResize();
+            FinishInteractions();
             CaptureBounds();
             applyingBounds = true;
             try
             {
                 appliedFloating = ViewModel.Floating;
+                CanMaximize = !appliedFloating;
                 if (!appliedFloating) ViewModel.ClickThrough = false;
                 WindowState = WindowState.Normal;
                 ApplyBounds(appliedFloating ? ViewModel.Settings.FloatingBounds : ViewModel.Settings.NormalBounds);
@@ -261,7 +270,7 @@ public partial class MainWindow : Window
         else if (e.PropertyName == nameof(MainViewModel.Topmost)) Topmost = ViewModel.Topmost;
         else if (e.PropertyName == nameof(MainViewModel.Meter))
         {
-            FinishResize();
+            FinishInteractions();
             CaptureBounds();
             double scale = ViewModel.Settings.FloatingBounds.Width / MeterDisplay.GetFloatingViewport(appliedMeter).Width;
             appliedMeter = ViewModel.Meter;
@@ -278,7 +287,7 @@ public partial class MainWindow : Window
         }
         else if (e.PropertyName == nameof(MainViewModel.ClickThrough))
         {
-            FinishResize();
+            FinishInteractions();
             ApplyClickThrough();
         }
         if (e.PropertyName != nameof(MainViewModel.Status) && !applyingBounds) ScheduleSave();
@@ -356,7 +365,7 @@ public partial class MainWindow : Window
     private void HideSafely()
     {
         if (!HasRecoveryIcon) { Exit(); return; }
-        FinishResize();
+        FinishInteractions();
         CaptureBounds(); Persist(); Hide();
     }
     public void ReturnToNormal() { ShowAccessible(); ViewModel.Floating = false; }
@@ -383,15 +392,23 @@ public partial class MainWindow : Window
             ViewModel.Status = "システム設定の『プライバシーとセキュリティ』から収録の許可を確認してください。";
         }
     }
-    private void DragWindow(object? sender, PointerPressedEventArgs e)
+    private void OpenDiagnostics()
     {
-        if (resizePointer is null && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e);
+        if (interactionLog is null) return;
+        try
+        {
+            string directory = Path.GetDirectoryName(interactionLog.FilePath)!;
+            Directory.CreateDirectory(directory);
+            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(directory)
+                { UseShellExecute = true });
+        }
+        catch (Exception ex) { store.Log(ex); ViewModel.Status = "操作ログのフォルダーを開けませんでした。"; }
     }
     private void ResizeWindow(object? sender, PointerPressedEventArgs e)
     {
         if (!CanResize || WindowState != WindowState.Normal || ViewModel.ClickThrough ||
             !IsResizeLeftButtonPressed(e)) return;
-        FinishResize();
+        FinishInteractions();
         // Read desktop coordinates directly on macOS. A queued event's local
         // coordinates can refer to the content view before its latest resize.
         Point? origin = ReadResizePointer(e);
@@ -406,6 +423,8 @@ public partial class MainWindow : Window
             new Size(MinWidth, MinHeight), MaximumClientSize(Position, fromAnchor: true), ViewModel.Floating);
         resizePointer = e.Pointer;
         resizePointer.Capture(ResizeHandle);
+        interactionLog?.Begin("resize", ViewModel.Meter.ToString(), ViewModel.Floating, origin, start);
+        interactionLog?.Record("press", e.Timestamp, origin, start, pointerCaptured: true);
         e.Handled = true;
     }
     private void ResizePointerMoved(object? sender, PointerEventArgs e)
@@ -413,14 +432,17 @@ public partial class MainWindow : Window
         if (!ReferenceEquals(resizePointer, e.Pointer)) return;
         if (!IsResizeLeftButtonPressed(e))
         {
-            FinishResize();
+            FinishResize("button-released");
             return;
         }
         Point? position = ReadResizePointer(e);
         if (position is null) return;
         Size size = resizeGesture!.GetSize(position.Value);
+        interactionLog?.Record("request", e.Timestamp, position, size,
+            e.GetCurrentPoint(this).Properties.IsLeftButtonPressed, true, true);
         Width = size.Width;
         Height = size.Height;
+        interactionLog?.Record("applied", e.Timestamp);
         e.Handled = true;
     }
     private void ResizePointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -428,12 +450,12 @@ public partial class MainWindow : Window
         if (!ReferenceEquals(resizePointer, e.Pointer) || e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         // Finish at the last drag sample. Reinterpreting MouseUp in a newly
         // resized native view was another source of an end-of-drag jump.
-        FinishResize();
+        FinishResize("released");
         e.Handled = true;
     }
     private void ResizePointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
-        if (ReferenceEquals(resizePointer, e.Pointer)) FinishResize();
+        if (ReferenceEquals(resizePointer, e.Pointer)) FinishResize("capture-lost");
     }
     protected virtual Point GetResizeDesktopPosition(PointerEventArgs e)
     {
@@ -447,15 +469,16 @@ public partial class MainWindow : Window
     private Point? ReadResizePointer(PointerEventArgs e)
     {
         try { return GetResizeDesktopPosition(e); }
-        catch (Exception ex) { store.Log(ex); FinishResize(); return null; }
+        catch (Exception ex) { store.Log(ex); FinishInteractions(); return null; }
     }
-    private void FinishResize()
+    private void FinishResize(string reason = "interrupted")
     {
         var pointer = resizePointer;
         resizePointer = null;
         resizeGesture = null;
         if (pointer is null) return;
         if (ReferenceEquals(pointer.Captured, ResizeHandle)) pointer.Capture(null);
+        interactionLog?.End(reason);
         CaptureBounds();
         ScheduleSave();
     }
@@ -478,7 +501,7 @@ public partial class MainWindow : Window
     public void PrepareForShutdown()
     {
         if (exiting) return;
-        FinishResize();
+        FinishInteractions();
         exiting = true;
         CaptureBounds(); Persist(); settingsWindow?.Close();
     }
