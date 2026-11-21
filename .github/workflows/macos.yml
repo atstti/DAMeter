@@ -62,6 +62,23 @@ jobs:
           PY
           fi
           exit "$status"
+      - name: Restore native pointer checks
+        run: dotnet restore tests/DAMeter.Mac.NativeSmoke/DAMeter.Mac.NativeSmoke.csproj --locked-mode
+      - name: Check AppKit drag events and native window geometry
+        timeout-minutes: 4
+        run: |
+          status=0
+          dotnet run --project tests/DAMeter.Mac.NativeSmoke/DAMeter.Mac.NativeSmoke.csproj --configuration Release --no-restore > artifacts/native-pointer.log 2>&1 || status=$?
+          cat artifacts/native-pointer.log
+          if [[ "$status" != 0 ]]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          text = '\n'.join(Path('artifacts/native-pointer.log').read_text(errors='replace').splitlines()[-30:])
+          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print('::error title=Native pointer checks failed::' + text)
+          PY
+          fi
+          exit "$status"
       - name: Publish, verify signatures, and smoke test Mac application
         run: |
           status=0
@@ -89,5 +106,6 @@ jobs:
             artifacts/macos-${{ matrix.rid }}/THIRD-PARTY-NOTICES.txt
             artifacts/test-results/core-tests.trx
             artifacts/test-results/mac-tests.trx
+            artifacts/native-pointer.log
           if-no-files-found: error
           retention-days: 30
