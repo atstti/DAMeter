@@ -66,8 +66,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
     <key>CFBundleIdentifier</key><string>org.atstti.DAMeter</string>
     <key>CFBundleExecutable</key><string>DAMeter.Mac</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleVersion</key><string>0.1.9</string>
-    <key>CFBundleShortVersionString</key><string>0.1.9</string>
+    <key>CFBundleVersion</key><string>0.1.10</string>
+    <key>CFBundleShortVersionString</key><string>0.1.10</string>
     <key>CFBundleIconFile</key><string>DAMeter.icns</string>
     <key>LSMinimumSystemVersion</key><string>15.0</string>
     <key>NSHighResolutionCapable</key><true/>
@@ -142,6 +142,10 @@ done < <(find "$macos" -type f -print0)
 /usr/bin/codesign --verify --strict --verbose=2 "$audio_library"
 /usr/bin/codesign --force --sign - --timestamp=none --entitlements "$temporary/entitlements.plist" "$app"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$app"
+# Validate both the ICNS representations and the icon resolved by macOS for
+# this exact bundle. This does not change LaunchServices or capture permissions.
+/usr/bin/iconutil --convert iconset "$resources/DAMeter.icns" --output "$temporary/verified.iconset"
+xcrun swift -swift-version 5 native/Tools/VerifyAppIcon.swift "$app" "$temporary/verified.iconset"
 /usr/bin/codesign --display --entitlements :- "$macos/DAMeter.Mac" > "$temporary/signed-entitlements.plist"
 python3 - "$temporary/signed-entitlements.plist" <<'PY'
 import plistlib, sys
@@ -170,7 +174,7 @@ PY
 esac
 
 commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
-printf 'DAMeter 0.1.9 %s\nSource: %s\n.NET SDK: %s\nSignature: ad-hoc, not notarized\nSystem audio / interactive UI acceptance: not performed by this script\n' \
+printf 'DAMeter 0.1.10 %s\nSource: %s\n.NET SDK: %s\nSignature: ad-hoc, not notarized\nSystem audio / interactive UI acceptance: not performed by this script\n' \
     "$rid" "$commit" "$(dotnet --version)" > "$output/BUILD-INFO.txt"
 cp docs/MACOS.md "$output/README-ja.md"
 cp THIRD-PARTY-NOTICES.txt "$output/"

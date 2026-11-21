@@ -1,5 +1,11 @@
 # DAMeter のテスト結果と Windows 受け入れ確認
 
+## Mac版0.1.10：矢印カーソルとアイコン検証
+
+右下のカーソルを `Arrow` に変更しました。ネイティブ検証は実ホバー後に `NSCursor.currentCursor == NSCursor.arrowCursor` かつ十字と異なることを確認します。受け入れ済みの14×14マークと20×20の入力領域は変更していません。
+
+Mac配布検証へ、ICNSのデコード・サイズ検証と、`NSWorkspace.shared.icon(forFile:)` で対象バンドルから取得したアイコンがDAMeterのアイコンであることの検証を追加します。権限一覧の古いアイコン表示を修復できたとはまだ確認していません。実行結果はCI完了後に記録します。
+
 ## Mac版0.1.9：標準カーソルと小型マーク
 
 独自Bitmapカーソルを取り除いて `BottomRightCorner` を復元し、ネイティブ検証も実ホバー後の `NSCursor.currentCursor` が当初と同じ `NSCursor.crosshairCursor` であることを確認する形に戻しました。3表示での拡縮・移動の反復検証は維持します。

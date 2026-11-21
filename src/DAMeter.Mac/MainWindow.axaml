@@ -62,7 +62,7 @@
                        TextWrapping="Wrap" IsVisible="{Binding Normal}" />
         </Grid>
         <Canvas>
-            <Border x:Name="ResizeHandle" Width="20" Height="20" Background="Transparent" Cursor="BottomRightCorner"
+            <Border x:Name="ResizeHandle" Width="20" Height="20" Background="Transparent" Cursor="Arrow"
                     PointerPressed="ResizeWindow" PointerMoved="ResizePointerMoved" PointerReleased="ResizePointerReleased"
                     PointerCaptureLost="ResizePointerCaptureLost" ToolTip.Tip="右下をドラッグして拡大・縮小"
                     AutomationProperties.Name="メーターのサイズ変更">

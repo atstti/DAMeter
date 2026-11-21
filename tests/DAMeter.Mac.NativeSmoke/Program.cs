@@ -55,7 +55,7 @@ public sealed class SmokeApplication : Application
                 try
                 {
                     await NativePointerChecks.Run(window);
-                    Console.WriteLine("PASS: AppKit mouse events, standard resize cursor, real Quartz cursor sampling, repeated native resizes, and native frame bounds.");
+                    Console.WriteLine("PASS: AppKit mouse events, arrow cursor over the resize grip, real Quartz cursor sampling, repeated native resizes, and native frame bounds.");
                 }
                 catch (Exception error)
                 {
@@ -149,7 +149,7 @@ internal static class NativePointerChecks
             await Settle(window);
             if (hovered == 0)
                 throw new InvalidOperationException($"{mode}: resize cursor check received no routed native hover on ResizeHandle at {desktop}.");
-            NativeInput.AssertStandardResizeCursor($"{mode}: resize grip hover");
+            NativeInput.AssertArrowResizeCursor($"{mode}: resize grip hover");
         }
         finally { handle.RemoveHandler(InputElement.PointerMovedEvent, onHover); }
     }
@@ -270,20 +270,21 @@ internal static class NativeInput
     public const nuint MouseDragged = 6;
     private static int eventNumber;
 
-    public static void AssertStandardResizeCursor(string context)
+    public static void AssertArrowResizeCursor(string context)
     {
         nint cursorClass = GetClass("NSCursor");
         nint current = GetObject(cursorClass, Selector("currentCursor"));
         if (cursorClass == 0 || current == 0)
             throw new InvalidOperationException($"{context}: NSCursor.currentCursor is unavailable (class=0x{cursorClass:x}, current=0x{current:x}).");
+        nint arrow = GetObject(cursorClass, Selector("arrowCursor"));
         nint crosshair = GetObject(cursorClass, Selector("crosshairCursor"));
         string nativeClass = Marshal.PtrToStringUTF8(GetClassName(current)) ?? "unknown";
-        string details = $"class={nativeClass}, current=0x{current:x}, crosshair=0x{crosshair:x}";
-        // Avalonia.Native 11.3.22 maps BottomRightCorner to this native cursor.
-        // The requested original cursor must not remain the oversized bitmap.
-        if (crosshair == 0 || current != crosshair)
-            throw new InvalidOperationException($"{context}: expected the original standard BottomRightCorner/crosshair cursor; {details}.");
-        Console.WriteLine($"Verified native standard resize cursor: {details}.");
+        string details = $"class={nativeClass}, current=0x{current:x}, arrow=0x{arrow:x}, crosshair=0x{crosshair:x}";
+        // Keep the ordinary pointer over the visible grip, without switching
+        // to Avalonia.Native's crosshair mapping for diagonal resize cursors.
+        if (arrow == 0 || crosshair == 0 || current != arrow || current == crosshair)
+            throw new InvalidOperationException($"{context}: expected the ordinary arrow cursor, distinct from the crosshair; {details}.");
+        Console.WriteLine($"Verified native arrow cursor over resize grip: {details}.");
     }
 
     public static void Warp(Point desktop)

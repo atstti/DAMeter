@@ -8,19 +8,19 @@ Windows 10 / 11（64bit）で再生中のシステム音声を表示する、C# 
 
 ## ダウンロード
 
-**[0.1.9試用版のダウンロードページ](https://github.com/atstti/codex/releases/tag/v0.1.9)** を開き、Assetsから自分の環境に合うファイルを選んでください。試用版を含む配布一覧は [Releases](https://github.com/atstti/codex/releases) にあります。
+**[0.1.10試用版のダウンロードページ](https://github.com/atstti/codex/releases/tag/v0.1.10)** を開き、Assetsから自分の環境に合うファイルを選んでください。試用版を含む配布一覧は [Releases](https://github.com/atstti/codex/releases) にあります。
 
-| 使用するパソコン | 0.1.9のダウンロード | 起動方法 |
+| 使用するパソコン | 0.1.10のダウンロード | 起動方法 |
 | --- | --- | --- |
-| Windows 10 / 11（64bit） | [DAMeter-win-x64.zip](https://github.com/atstti/codex/releases/download/v0.1.9/DAMeter-win-x64.zip) | ZIPを展開し、`DAMeter.exe` を起動 |
-| Mac・Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/codex/releases/download/v0.1.9/DAMeter-osx-arm64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
-| Mac・Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/codex/releases/download/v0.1.9/DAMeter-osx-x64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
+| Windows 10 / 11（64bit） | [DAMeter-win-x64.zip](https://github.com/atstti/codex/releases/download/v0.1.10/DAMeter-win-x64.zip) | ZIPを展開し、`DAMeter.exe` を起動 |
+| Mac・Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/codex/releases/download/v0.1.10/DAMeter-osx-arm64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
+| Mac・Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/codex/releases/download/v0.1.10/DAMeter-osx-x64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
 
 配布ファイルは自己完結型で、実行時に.NETを別途インストールする必要はありません。Mac版はmacOS 15以降が対象です。更新するときは旧版を完全終了してから置き換えてください。
 
 Mac版の初回起動・収録許可と、許可済みでも音声を取得できない場合の再登録手順は [Mac版の説明](docs/MACOS.md) にあります。`Source code` は開発用ソース一式です。アプリを使う場合は上のZIPまたはDMGを選びます。
 
-Mac版0.1.9では、大きな独自カーソルを取りやめ、最初の標準カーソル（Macでは十字）に戻しました。右下のサイズ変更マークも小さくしました。つかめる範囲は維持し、マウスを重ねると色で強調します。
+Mac版0.1.10では、サイズ変更マークに重ねても通常の矢印カーソルを表示します。右下の小さなマークと、マウスを重ねたときの色の強調は維持しています。Macの配布検証には、バンドルアイコンをmacOSが正しく取得できることの確認を追加しました。
 
 サイズ変更中に突然大きくなる症状は引き続き調査中です。再現時は「設定 → 操作ログの場所を開く」から `interactions.jsonl` を取得できます。設定画面で起動中のバージョンも確認できます。
 
@@ -137,4 +137,4 @@ dotnet test tests/DAMeter.Core.Tests/DAMeter.Core.Tests.csproj --configuration R
 | `src/DAMeter/Platform` | トレイ、クリック透過、モニターとウィンドウ位置 |
 | `tests/DAMeter.Core.Tests` | xUnit による数値処理と設定保存の検証 |
 
-音声解析・設定保存・Mac UI／音声連携の自動テストと、Windows／両Mac CPU向けのCIビルド・配布検証を行います。現在の件数・結果と受け入れチェックリストは [docs/TESTING.md](docs/TESTING.md) を参照してください。Mac版0.1.3では、収録許可を削除・追加し直して実音声に反応したとのユーザー報告があります。0.1.9のMac実機での繰り返しサイズ変更は未確認で、Windowsの実音声取得を含む実機での受け入れ確認も別途必要です。
+音声解析・設定保存・Mac UI／音声連携の自動テストと、Windows／両Mac CPU向けのCIビルド・配布検証を行います。現在の件数・結果と受け入れチェックリストは [docs/TESTING.md](docs/TESTING.md) を参照してください。Mac版0.1.3では、収録許可を削除・追加し直して実音声に反応したとのユーザー報告があります。0.1.10のMac実機での繰り返しサイズ変更は未確認で、Windowsの実音声取得を含む実機での受け入れ確認も別途必要です。
