@@ -1,0 +1,152 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Package ${{ matrix.rid }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            rid: win-x64
+          - runner: macos-15
+            rid: osx-arm64
+          - runner: macos-15-intel
+            rid: osx-x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      RID: ${{ matrix.rid }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check release version and notes
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Expected a vMAJOR.MINOR.PATCH tag.' >&2; exit 1; }
+          test -s "docs/releases/$RELEASE_TAG.md"
+          version="${RELEASE_TAG#v}"
+          grep -Fq "<key>CFBundleVersion</key><string>$version</string>" scripts/publish-macos.sh
+          grep -Fq "<key>CFBundleShortVersionString</key><string>$version</string>" scripts/publish-macos.sh
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Build, test, and package
+        run: |
+          log="$RUNNER_TEMP/dameter-release-build.log"
+          status=0
+          # A separate bash process preserves fail-fast behavior while its log
+          # is captured for a readable public Actions failure annotation.
+          bash -euo pipefail > "$log" 2>&1 <<'BUILD' || status=$?
+          if [[ "$RID" == win-x64 ]]; then
+            dotnet restore DAMeter.slnx --locked-mode
+            dotnet build DAMeter.slnx --configuration Release --no-restore --warnaserror
+            dotnet test tests/DAMeter.Core.Tests/DAMeter.Core.Tests.csproj --configuration Release --no-build
+            pwsh -NoProfile -File ./scripts/publish.ps1
+          else
+            dotnet restore tests/DAMeter.Mac.Tests/DAMeter.Mac.Tests.csproj --locked-mode
+            dotnet restore tests/DAMeter.Core.Tests/DAMeter.Core.Tests.csproj --locked-mode
+            dotnet build tests/DAMeter.Mac.Tests/DAMeter.Mac.Tests.csproj --configuration Release --no-restore --warnaserror
+            dotnet test tests/DAMeter.Core.Tests/DAMeter.Core.Tests.csproj --configuration Release --no-restore
+            dotnet test tests/DAMeter.Mac.Tests/DAMeter.Mac.Tests.csproj --configuration Release --no-build
+            bash scripts/publish-macos.sh "$RID"
+          fi
+          BUILD
+          cat "$log"
+          if [[ "$status" != 0 ]]; then
+            message="$(tail -n 60 "$log")"
+            message="${message//'%'/'%25'}"
+            message="${message//$'\r'/'%0D'}"
+            message="${message//$'\n'/'%0A'}"
+            echo "::error title=Release build failed ($RID)::$message"
+          fi
+          exit "$status"
+      - name: Stage release assets
+        run: |
+          mkdir release-assets
+          if [[ "$RID" == win-x64 ]]; then
+            cp artifacts/DAMeter-win-x64.zip release-assets/
+            (cd release-assets && sha256sum DAMeter-win-x64.zip > SHA256SUMS-win-x64.txt)
+          else
+            cp "artifacts/macos-$RID/DAMeter-$RID.zip" "artifacts/macos-$RID/DAMeter-$RID.dmg" release-assets/
+            cp "artifacts/macos-$RID/SHA256SUMS.txt" "release-assets/SHA256SUMS-$RID.txt"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-payload-${{ matrix.rid }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish GitHub prerelease
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-payload-*
+          path: release-assets
+          merge-multiple: true
+      - name: Verify payloads, upload a draft, then publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          notes="$GITHUB_WORKSPACE/docs/releases/$RELEASE_TAG.md"
+          test -s "$notes"
+          cd release-assets
+          assets=(
+            DAMeter-win-x64.zip
+            DAMeter-osx-arm64.dmg
+            DAMeter-osx-arm64.zip
+            DAMeter-osx-x64.dmg
+            DAMeter-osx-x64.zip
+            SHA256SUMS-win-x64.txt
+            SHA256SUMS-osx-arm64.txt
+            SHA256SUMS-osx-x64.txt
+          )
+          for asset in "${assets[@]}"; do test -s "$asset"; done
+          test "$(find . -maxdepth 1 -type f | wc -l)" -eq "${#assets[@]}"
+          sha256sum --check SHA256SUMS-win-x64.txt SHA256SUMS-osx-arm64.txt SHA256SUMS-osx-x64.txt
+
+          # No --clobber or edits to a pre-existing release. Creation fails if
+          # this tag already has one, and uploads remain private until complete.
+          gh release create "$RELEASE_TAG" "${assets[@]}" --verify-tag --draft --prerelease \
+            --title "DAMeter ${RELEASE_TAG#v}（試用版）" --notes-file "$notes"
+          metadata="$(mktemp)"
+          trap 'rm -f "$metadata"' EXIT
+          gh release view "$RELEASE_TAG" --json isDraft,assets > "$metadata"
+          python3 - "$metadata" "${assets[@]}" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          release = json.loads(Path(sys.argv[1]).read_text())
+          expected = {name: Path(name).stat().st_size for name in sys.argv[2:]}
+          actual = {asset['name']: asset['size'] for asset in release['assets']}
+          if not release['isDraft'] or actual != expected or len(release['assets']) != len(expected):
+              raise SystemExit('Draft asset names or sizes do not match the verified payloads.')
+          PY
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease

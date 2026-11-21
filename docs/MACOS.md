@@ -28,15 +28,18 @@ macOS のシステム音声を表示する Avalonia / .NET 10 アプリです。
 
 ## ダウンロードと起動
 
-**[Apple Silicon向け0.1.4をダウンロード](https://github.com/atstti/codex/actions/runs/44897497586/artifacts/14704613068)**（2026年11月21日作成、GitHubへのログインが必要です）。ZIPを展開し、中の `DAMeter-osx-arm64.dmg` を開いてインストールしてください。Artifactsの保存期間は30日です。期限切れの場合は [Actions → Build macOS](https://github.com/atstti/codex/actions/workflows/macos.yml) から新しいビルドを取得します。
+**[0.1.4試用版のダウンロードページ](https://github.com/atstti/codex/releases/tag/v0.1.4)** のAssetsから、使用するMacに合ったDMGを選びます。試用版を含む配布一覧は [Releases](https://github.com/atstti/codex/releases) にあります。
 
-1. GitHub のリポジトリで **Actions → Build macOS** を開き、成功した実行を選びます。
-2. **Artifacts** から、自分のCPUに合った `DAMeter-osx-arm64` または `DAMeter-osx-x64` をダウンロードします。
-3. Artifacts のZIPを展開します。中にアプリ入りZIP、DMG、チェックサム、検証記録があります。
-4. DMGを開いて `DAMeter.app` を「アプリケーション」へドラッグするか、アプリ入りZIPを展開してアプリを移動します。
-5. `DAMeter.app` を起動します。
+| 使用するMac | 0.1.4のダウンロード |
+| --- | --- |
+| Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/codex/releases/download/v0.1.4/DAMeter-osx-arm64.dmg) |
+| Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/codex/releases/download/v0.1.4/DAMeter-osx-x64.dmg) |
 
-GitHub Actionsの実行とArtifactsの取得には、GitHubへのログインが必要な場合があります。実音声の取得と許可ダイアログの確認は、インストール後のMacで行ってください。
+1. 使用中のDAMeterを⌘Qまたは「終了」で完全終了します。
+2. ダウンロードしたDMGを開き、`DAMeter.app` を「アプリケーション」へドラッグします。旧版がある場合は置き換えます。
+3. 「アプリケーション」内の `DAMeter.app` を起動します。
+
+DMGの代わりに、同じCPU向けの `DAMeter-osx-arm64.zip` または `DAMeter-osx-x64.zip` を展開してアプリを移動する方法も使えます。ReleasesのファイルはActionsのArtifactsを展開し直す必要がなく、直接ダウンロードできます。`Source code` は開発用ソース一式です。実音声の取得と許可ダイアログの確認は、インストール後のMacで行ってください。
 
 「このMacについて」で「チップ: Apple M…」と表示される場合は Apple Silicon、「プロセッサ: Intel…」と表示される場合は Intel です。
 

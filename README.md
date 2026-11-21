@@ -6,6 +6,20 @@ Windows 10 / 11（64bit）で再生中のシステム音声を表示する、C# 
 
 音声バッファはメモリ内で計算後に破棄します。音声の録音、ファイル保存、外部送信は行いません。保存するのは表示設定と例外ログです。
 
+## ダウンロード
+
+**[0.1.4試用版のダウンロードページ](https://github.com/atstti/codex/releases/tag/v0.1.4)** を開き、Assetsから自分の環境に合うファイルを選んでください。試用版を含む配布一覧は [Releases](https://github.com/atstti/codex/releases) にあります。
+
+| 使用するパソコン | 0.1.4のダウンロード | 起動方法 |
+| --- | --- | --- |
+| Windows 10 / 11（64bit） | [DAMeter-win-x64.zip](https://github.com/atstti/codex/releases/download/v0.1.4/DAMeter-win-x64.zip) | ZIPを展開し、`DAMeter.exe` を起動 |
+| Mac・Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/codex/releases/download/v0.1.4/DAMeter-osx-arm64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
+| Mac・Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/codex/releases/download/v0.1.4/DAMeter-osx-x64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
+
+配布ファイルは自己完結型で、実行時に.NETを別途インストールする必要はありません。Mac版はmacOS 15以降が対象です。更新するときは旧版を完全終了してから置き換えてください。
+
+Mac版の初回起動・収録許可と、許可済みでも音声を取得できない場合の再登録手順は [Mac版の説明](docs/MACOS.md) にあります。`Source code` は開発用ソース一式です。アプリを使う場合は上のZIPまたはDMGを選びます。
+
 ## 実装機能
 
 | 項目 | 内容 |
@@ -119,4 +133,4 @@ dotnet test tests/DAMeter.Core.Tests/DAMeter.Core.Tests.csproj --configuration R
 | `src/DAMeter/Platform` | トレイ、クリック透過、モニターとウィンドウ位置 |
 | `tests/DAMeter.Core.Tests` | xUnit による数値処理と設定保存の検証 |
 
-Linux / .NET SDK 10.0.403 で **Core 46件・Mac UI/通信25件、計71件成功、失敗0・スキップ0** を確認しました。Windowsと両Mac CPUのCIビルド・配布物生成、Macの権限不要の音声変換セルフテストと起動チェックも成功しています。実音声と手動操作の受け入れ確認は未実施です。詳細と受け入れチェックリストは [docs/TESTING.md](docs/TESTING.md) を参照してください。
+Linux / .NET SDK 10.0.403 で **Core 46件・Mac UI/音声連携46件、計92件成功、失敗0・スキップ0** を確認しました。Windowsと両Mac CPUのCIビルド・配布物生成、Macの権限不要の音声変換セルフテストと起動終了チェックも成功しています。Mac版0.1.3では、収録許可を削除・追加し直して実音声に反応したとのユーザー報告があります。0.1.4のフローティング操作や、Windowsの実音声取得を含む実機での受け入れ確認は別途必要です。詳細と受け入れチェックリストは [docs/TESTING.md](docs/TESTING.md) を参照してください。
