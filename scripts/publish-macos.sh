@@ -66,8 +66,8 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
     <key>CFBundleIdentifier</key><string>org.atstti.DAMeter</string>
     <key>CFBundleExecutable</key><string>DAMeter.Mac</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleVersion</key><string>0.1.6</string>
-    <key>CFBundleShortVersionString</key><string>0.1.6</string>
+    <key>CFBundleVersion</key><string>0.1.7</string>
+    <key>CFBundleShortVersionString</key><string>0.1.7</string>
     <key>CFBundleIconFile</key><string>DAMeter.icns</string>
     <key>LSMinimumSystemVersion</key><string>15.0</string>
     <key>NSHighResolutionCapable</key><true/>
@@ -170,7 +170,7 @@ PY
 esac
 
 commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
-printf 'DAMeter 0.1.6 %s\nSource: %s\n.NET SDK: %s\nSignature: ad-hoc, not notarized\nSystem audio / interactive UI acceptance: not performed by this script\n' \
+printf 'DAMeter 0.1.7 %s\nSource: %s\n.NET SDK: %s\nSignature: ad-hoc, not notarized\nSystem audio / interactive UI acceptance: not performed by this script\n' \
     "$rid" "$commit" "$(dotnet --version)" > "$output/BUILD-INFO.txt"
 cp docs/MACOS.md "$output/README-ja.md"
 cp THIRD-PARTY-NOTICES.txt "$output/"
