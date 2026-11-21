@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Themes.Fluent;
 using Avalonia.Threading;
 using DAMeter.Core;
@@ -74,11 +75,16 @@ public sealed class SmokeApplication : Application
     }
 }
 
-internal sealed class PointerWindow(SettingsStore store, AppSettings settings) : MainWindow(store, settings, smokeTest: true)
+internal sealed class PointerWindow : MainWindow
 {
+    public PointerWindow(SettingsStore store, AppSettings settings) : base(store, settings, smokeTest: true) =>
+        AddHandler(InputElement.PointerPressedEvent, (_, e) => LastPointer = e.Pointer,
+            RoutingStrategies.Tunnel, handledEventsToo: true);
+
     // App-local NSEvents deliberately do not forge system HID state or require
     // Accessibility permission. All geometry and cursor sampling remain native.
     public bool SyntheticLeftPressed { get; set; }
+    public IPointer? LastPointer { get; private set; }
     protected override bool IsResizeLeftButtonPressed(PointerEventArgs e) => SyntheticLeftPressed;
     protected override Point GetResizeDesktopPosition(PointerEventArgs e) => MacWindowInterop.GetPointerPosition();
 }
@@ -91,7 +97,8 @@ internal static class NativePointerChecks
         var meter = window.FindControl<MeterDisplay>("Meter")!;
         var handle = window.FindControl<Border>("ResizeHandle")!;
         int movesObserved = 0;
-        handle.PointerMoved += (_, _) => movesObserved++;
+        handle.AddHandler(InputElement.PointerMovedEvent, (_, _) => movesObserved++,
+            RoutingStrategies.Bubble, handledEventsToo: true);
         foreach (MeterMode mode in Enum.GetValues<MeterMode>())
         {
             window.ViewModel.Meter = mode;
@@ -107,6 +114,7 @@ internal static class NativePointerChecks
             {
                 await Drag(window, handle, mode, 45);
                 await Drag(window, handle, mode, -45);
+                await MoveToTopAndBack(window, meter, mode);
             }
             AssertClose(window.ClientSize.Width, initial.Width, 2, $"{mode}: repeated drags changed base width");
         }
@@ -127,6 +135,7 @@ internal static class NativePointerChecks
         window.SyntheticLeftPressed = true;
         NativeInput.Post(window, NativeInput.MouseDown, start);
         await Task.Delay(40);
+        AssertCapture(window, handle, $"{mode}: resize press");
 
         double ratio = before.Width / before.Height;
         for (int sample = 1; sample <= 6; sample++)
@@ -154,6 +163,7 @@ internal static class NativePointerChecks
         window.SyntheticLeftPressed = false;
         NativeInput.Post(window, NativeInput.MouseUp, end);
         await Settle(window);
+        AssertCapture(window, null, $"{mode}: resize release");
         AssertClose(window.ClientSize.Width, onRelease.Width, 1, $"{mode}: mouse-up changed native size");
 
         // A delayed move with the button released must not keep sizing.
@@ -162,6 +172,49 @@ internal static class NativePointerChecks
         NativeInput.Post(window, NativeInput.MouseMoved, away);
         await Settle(window);
         AssertClose(window.ClientSize.Width, onRelease.Width, 1, $"{mode}: released pointer changed native size");
+    }
+
+    private static async Task MoveToTopAndBack(PointerWindow window, MeterDisplay meter, MeterMode mode)
+    {
+        var screen = window.Screens.ScreenFromWindow(window)!;
+        int top = screen.WorkingArea.Y;
+        // The cursor can enter the menu-bar region while the utility window
+        // itself remains inside the work area. No native drag session is used.
+        await Move(window, meter, mode, Math.Max(screen.Bounds.Y, top - 8), top);
+        Point grip = meter.TranslatePoint(new Point(meter.Bounds.Width / 2, meter.Bounds.Height / 2), window)!.Value;
+        await Move(window, meter, mode, top + grip.Y + 70, top + 70);
+    }
+
+    private static async Task Move(PointerWindow window, MeterDisplay meter, MeterMode mode, double pointerY, int expectedTop)
+    {
+        Size before = window.ClientSize;
+        Point grip = meter.TranslatePoint(new Point(meter.Bounds.Width / 2, meter.Bounds.Height / 2), window)!.Value;
+        var start = new Point(window.Position.X + grip.X, window.Position.Y + grip.Y);
+        NativeInput.Warp(start);
+        window.SyntheticLeftPressed = true;
+        NativeInput.Post(window, NativeInput.MouseDown, start);
+        await Task.Delay(40);
+        AssertCapture(window, meter, $"{mode}: move press");
+        for (int sample = 1; sample <= 4; sample++)
+        {
+            Point desktop = new(start.X, start.Y + (pointerY - start.Y) * sample / 4);
+            NativeInput.Warp(desktop);
+            NativeInput.Post(window, NativeInput.MouseDragged, desktop);
+            await Settle(window);
+            AssertClose(window.ClientSize.Width, before.Width, 1, $"{mode}: moving resized native width");
+            AssertClose(window.ClientSize.Height, before.Height, 1, $"{mode}: moving resized native height");
+        }
+        window.SyntheticLeftPressed = false;
+        NativeInput.Post(window, NativeInput.MouseUp, new Point(start.X, pointerY));
+        await Settle(window);
+        AssertCapture(window, null, $"{mode}: move release");
+        AssertClose(window.Position.Y, expectedTop, 1, $"{mode}: native move did not reach requested top");
+    }
+
+    private static void AssertCapture(PointerWindow window, IInputElement? expected, string message)
+    {
+        if (window.LastPointer is null || !ReferenceEquals(window.LastPointer.Captured, expected))
+            throw new InvalidOperationException($"{message}: expected capture={expected?.GetType().Name ?? "none"}, actual={window.LastPointer?.Captured?.GetType().Name ?? "none"}.");
     }
 
     private static async Task Settle(Window window)
