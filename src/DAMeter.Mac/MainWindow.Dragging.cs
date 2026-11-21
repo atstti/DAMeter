@@ -38,10 +38,7 @@ public partial class MainWindow
         if (!IsResizeLeftButtonPressed(e)) { FinishMove("button-released"); return; }
         Point? desktop = ReadResizePointer(e);
         if (desktop is null) return;
-        var pointer = new PixelPoint((int)Math.Round(desktop.Value.X), (int)Math.Round(desktop.Value.Y));
-        var screen = Screens.ScreenFromPoint(pointer) ?? Screens.ScreenFromWindow(this) ?? Screens.Primary;
-        if (screen is null) return;
-        Position = moveGesture!.GetPosition(desktop.Value, screen.WorkingArea,
+        Position = moveGesture!.GetPosition(desktop.Value, Screens.All.Select(screen => screen.WorkingArea),
             PixelSize.FromSize(ClientSize, DesktopScaling));
         interactionLog?.Record("move", e.Timestamp, desktop, rawLeftPressed: e.GetCurrentPoint(this).Properties.IsLeftButtonPressed,
             physicalLeftPressed: true, pointerCaptured: true);
@@ -67,6 +64,9 @@ public partial class MainWindow
         moveGesture = null;
         if (pointer is null) return;
         if (ReferenceEquals(pointer.Captured, Meter)) pointer.Capture(null);
+        var rectangle = new PixelRect(Position, PixelSize.FromSize(ClientSize, DesktopScaling));
+        if (!Screens.All.Any(screen => screen.WorkingArea.Intersects(rectangle)))
+            MacWindowInterop.EnsureVisible(this);
         interactionLog?.End(reason);
         CaptureBounds();
         ScheduleSave();
