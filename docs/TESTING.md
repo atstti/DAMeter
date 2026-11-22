@@ -8,7 +8,9 @@
 
 LinuxでMacの回帰テスト74件が成功し、警告0・エラー0です。追加したテストでは、保存済み透過ONからの起動で他の設定を保って復旧することと、キー入力を受け取れる状態でのEscによる解除を確認しています。緊急コマンドが他の設定を変更しないことも確認しました。
 
-Macの配布CLI検証では、録音を開始せず実際の `NSWindow.ignoresMouseEvents` をONにし、表示中のウィンドウへのDock再表示イベントと、実際にエクスポートしたDockメニューの復帰項目で、ネイティブの透過状態がOFFへ戻ることを確認します。実行結果はCI完了後に記録します。
+Macの配布CLI検証では、録音を開始せず実際の `NSWindow.ignoresMouseEvents` をONにし、表示中のウィンドウへのDock再表示イベントと、実際にエクスポートしたDockメニューの復帰項目で、ネイティブの透過状態がOFFへ戻ることを確認します。ソース `e65c719` の [Mac CI](https://github.com/atstti/codex/actions/runs/44969635693) はApple Silicon・Intelともに成功しました。両CPUで実際の透過ONを確認した後、表示中のウィンドウへのDock再表示イベントとエクスポート済みDockメニューの復帰項目から、ネイティブの透過OFF・ウィンドウ表示へ復旧することを確認しています。[Windows CI](https://github.com/atstti/codex/actions/runs/44969635623) も成功しました。
+
+[0.1.11公開CI](https://github.com/atstti/codex/actions/runs/44970104226) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42,036,897バイト）を匿名ダウンロードして、公開SHA-256と一致することを確認しました。
 
 ## Mac版0.1.10：矢印カーソルとアイコン検証
 
