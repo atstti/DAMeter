@@ -15,6 +15,42 @@ namespace DAMeter.Mac.Tests;
 public sealed class MainWindowTests
 {
     [AvaloniaFact]
+    public void StartupRecoversSavedClickThroughWithoutDiscardingOtherPreferences()
+    {
+        using var fixture = new WindowFixture(new AppSettings
+        {
+            ClickThrough = true, Floating = true, Meter = MeterMode.VerticalPeak,
+            BackgroundOpacity = 0.35, PeakHoldSeconds = 3.25, VuReferenceDb = -20
+        });
+        Assert.False(fixture.Window.ViewModel.ClickThrough);
+        Assert.True(fixture.Window.ViewModel.Floating);
+        Assert.Equal(MeterMode.VerticalPeak, fixture.Window.ViewModel.Meter);
+        fixture.Window.ViewModel.Save();
+        AppSettings saved = fixture.Store.Load();
+        Assert.False(saved.ClickThrough);
+        Assert.True(saved.Floating);
+        Assert.Equal(MeterMode.VerticalPeak, saved.Meter);
+        Assert.Equal(0.35, saved.BackgroundOpacity);
+        Assert.Equal(3.25, saved.PeakHoldSeconds);
+        Assert.Equal(-20, saved.VuReferenceDb);
+    }
+
+    [AvaloniaFact]
+    public void EscapeRestoresInputWhileTheFloatingMeterHasKeyboardFocus()
+    {
+        using var fixture = new WindowFixture(new AppSettings { Floating = true });
+        fixture.Window.ViewModel.ClickThrough = true;
+        Assert.True(fixture.Window.ViewModel.ClickThrough);
+        fixture.Window.Activate();
+        fixture.Window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+        fixture.Window.KeyReleaseQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(fixture.Window.ViewModel.ClickThrough);
+        Assert.True(fixture.Window.IsVisible);
+        Assert.True(fixture.Window.ViewModel.Floating);
+    }
+
+    [AvaloniaFact]
     public void PermissionButtonUsesTheViewModelActionWithoutOpeningSettingsDuringTests()
     {
         using var fixture = new WindowFixture();

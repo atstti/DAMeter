@@ -25,7 +25,7 @@
                 <MenuItem Header="フローティング表示" Click="ToggleFloating" />
                 <MenuItem Header="通常表示に戻す" Click="ReturnToNormal" />
                 <MenuItem Header="常に最前面 ON/OFF" Click="ToggleTopmost" />
-                <MenuItem Header="クリック透過 ON/OFF（解除はメニューバー）" Click="ToggleClickThrough" />
+                <MenuItem Header="クリック透過 ON/OFF（Dockクリックで解除）" Click="ToggleClickThrough" />
                 <MenuItem Header="設定" Command="{Binding SettingsCommand}" />
                 <MenuItem Header="終了" Click="ExitApplication" />
             </ContextMenu>

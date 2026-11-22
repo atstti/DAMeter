@@ -33,7 +33,7 @@ public sealed class MacTrayService : IDisposable
         menu.Items.Add(new NativeMenuItemSeparator());
         Add(menu, "通常表示に戻す", normal);
         Add(menu, "フローティング表示にする", floating);
-        Add(menu, "クリック透過 ON / OFF", toggleClickThrough);
+        Add(menu, "クリック透過 ON / OFF（Dockクリックで解除）", toggleClickThrough);
         Add(menu, "常に最前面 ON / OFF", toggleTopmost);
         menu.Items.Add(new NativeMenuItemSeparator());
         Add(menu, "設定…", settings);

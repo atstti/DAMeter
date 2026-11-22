@@ -22,7 +22,7 @@
             <TextBlock Text="VU は約300ms応答の RMS ベースの近似表示です。厳密な規格準拠ではありません。" TextWrapping="Wrap" Foreground="#A6B7C8" />
             <TextBlock Text="音声取得には macOS の『画面収録／画面とシステムオーディオ収録』の許可が必要です。許可後にアプリを再起動してください。画面フレームと音声をファイル保存する処理はありません。" TextWrapping="Wrap" Foreground="#A6B7C8" />
             <Button Content="macOSの権限設定を開く" Command="{Binding OpenPermissionsCommand}" HorizontalAlignment="Left" />
-            <TextBlock Text="クリック透過はメニューバーの DAMeter メニューから解除できます。" TextWrapping="Wrap" Foreground="#A6B7C8" />
+            <TextBlock Text="クリック透過はDockのDAMeterをクリックすると解除できます。⌘TabでDAMeterへ切り替える方法もあります。起動時は透過OFFで操作できます。" TextWrapping="Wrap" Foreground="#A6B7C8" />
             <TextBlock Text="{Binding VersionLabel}" Foreground="#A6B7C8" />
             <Button Content="操作ログの場所を開く" Command="{Binding OpenDiagnosticsCommand}" HorizontalAlignment="Left" />
             <TextBlock Text="移動・サイズ変更の診断記録をこのMac内に保存します。音声は含まれません。" TextWrapping="Wrap" Foreground="#A6B7C8" />

@@ -18,6 +18,7 @@ public partial class MainWindow : Window
 {
     private readonly SettingsStore store;
     private readonly bool smokeTest;
+    private readonly bool recoveredClickThroughOnStartup;
     private readonly DispatcherTimer saveTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private readonly MacTrayService? tray;
     private SettingsWindow? settingsWindow;
@@ -44,6 +45,10 @@ public partial class MainWindow : Window
         InitializeComponent();
         this.store = store;
         this.smokeTest = smokeTest;
+        // Always start with a window that accepts input. A saved passthrough
+        // state must not lock the user out before they can reach a recovery UI.
+        recoveredClickThroughOnStartup = settings.ClickThrough;
+        settings.ClickThrough = false;
         if (!smokeTest)
             interactionLog = new WindowInteractionLog(this,
                 typeof(MainWindow).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
@@ -56,6 +61,7 @@ public partial class MainWindow : Window
         ViewModel.OpenPermissionsRequested += OpenPermissions;
         ViewModel.OpenDiagnosticsRequested += OpenDiagnostics;
         ViewModel.PropertyChanged += SettingsChanged;
+        AddHandler(KeyDownEvent, RecoverInputOnEscape, RoutingStrategies.Tunnel, handledEventsToo: true);
         saveTimer.Tick += (_, _) => Persist();
         if (!smokeTest || (Program.SmokeTest && OperatingSystem.IsMacOS()))
         {
@@ -105,6 +111,7 @@ public partial class MainWindow : Window
             else
             {
                 ApplyClickThrough();
+                if (recoveredClickThroughOnStartup) ScheduleSave();
                 ViewModel.Start();
             }
         };
@@ -235,9 +242,32 @@ public partial class MainWindow : Window
             if (Position.Y > screen.WorkingArea.Y + 4)
                 throw new InvalidOperationException("The native floating window cannot reach the top of its desktop working area.");
         }
+        await VerifyNativeRecoveryAsync();
         ViewModel.Floating = false;
         await Task.Delay(100);
         Console.WriteLine("Verified native desktop pointer access, 12 compact window resizes, and top-edge placement without capture permission.");
+    }
+    private async Task VerifyNativeRecoveryAsync()
+    {
+        foreach (var recovery in new (string Name, Action Invoke)[]
+        {
+            ("Dock reopen", MacRecoveryInterop.RequestDockReopen),
+            ("Dock recovery menu", MacRecoveryInterop.InvokeDockRestore)
+        })
+        {
+            ViewModel.ClickThrough = true;
+            if (!ViewModel.ClickThrough || !MacRecoveryInterop.IsClickThrough(this))
+                throw new InvalidOperationException("Native click-through did not turn on before the recovery check.");
+            recovery.Invoke();
+            var deadline = System.Diagnostics.Stopwatch.StartNew();
+            while (ViewModel.ClickThrough || MacRecoveryInterop.IsClickThrough(this) || !IsVisible)
+            {
+                if (deadline.Elapsed > TimeSpan.FromSeconds(3))
+                    throw new InvalidOperationException($"{recovery.Name} did not restore native window input.");
+                await Task.Delay(25);
+            }
+            Console.WriteLine($"Verified {recovery.Name}: native ignoresMouseEvents is off and the window is visible.");
+        }
     }
     private void ScreensChanged(object? sender, EventArgs e)
     {
@@ -294,7 +324,7 @@ public partial class MainWindow : Window
     }
     private void ApplyClickThrough()
     {
-        if (!opened || smokeTest) return;
+        if (!opened || (smokeTest && !(Program.SmokeTest && OperatingSystem.IsMacOS()))) return;
         var enabled = ViewModel.Floating && ViewModel.ClickThrough;
         if (enabled && !HasRecoveryIcon)
         {
@@ -358,9 +388,16 @@ public partial class MainWindow : Window
     }
     public void ShowAccessible()
     {
+        if (IsShutdownRequested) return;
         ViewModel.ClickThrough = false;
         Show(); WindowState = WindowState.Normal;
         MacWindowInterop.EnsureVisible(this); Activate();
+    }
+    private void RecoverInputOnEscape(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || !ViewModel.ClickThrough) return;
+        ShowAccessible();
+        e.Handled = true;
     }
     private void HideSafely()
     {
@@ -368,10 +405,15 @@ public partial class MainWindow : Window
         FinishInteractions();
         CaptureBounds(); Persist(); Hide();
     }
-    public void ReturnToNormal() { ShowAccessible(); ViewModel.Floating = false; }
+    public void ReturnToNormal()
+    {
+        if (IsShutdownRequested) return;
+        ShowAccessible(); ViewModel.Floating = false;
+    }
     private void ReturnToNormal(object? sender, RoutedEventArgs e) => ReturnToNormal();
     public void OpenSettings()
     {
+        if (IsShutdownRequested) return;
         ShowAccessible();
         if (settingsWindow is not null) { settingsWindow.Activate(); return; }
         settingsWindow = new SettingsWindow { DataContext = ViewModel };
