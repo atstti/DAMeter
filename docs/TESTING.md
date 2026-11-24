@@ -8,31 +8,31 @@
 
 LinuxでMacの回帰テスト74件が成功し、警告0・エラー0です。追加したテストでは、保存済み透過ONからの起動で他の設定を保って復旧することと、キー入力を受け取れる状態でのEscによる解除を確認しています。緊急コマンドが他の設定を変更しないことも確認しました。
 
-Macの配布CLI検証では、録音を開始せず実際の `NSWindow.ignoresMouseEvents` をONにし、表示中のウィンドウへのDock再表示イベントと、実際にエクスポートしたDockメニューの復帰項目で、ネイティブの透過状態がOFFへ戻ることを確認します。ソース `e65c719` の [Mac CI](https://github.com/atstti/codex/actions/runs/44969635693) はApple Silicon・Intelともに成功しました。両CPUで実際の透過ONを確認した後、表示中のウィンドウへのDock再表示イベントとエクスポート済みDockメニューの復帰項目から、ネイティブの透過OFF・ウィンドウ表示へ復旧することを確認しています。[Windows CI](https://github.com/atstti/codex/actions/runs/44969635623) も成功しました。
+Macの配布CLI検証では、録音を開始せず実際の `NSWindow.ignoresMouseEvents` をONにし、表示中のウィンドウへのDock再表示イベントと、実際にエクスポートしたDockメニューの復帰項目で、ネイティブの透過状態がOFFへ戻ることを確認します。ソース `e65c719` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/44969635693) はApple Silicon・Intelともに成功しました。両CPUで実際の透過ONを確認した後、表示中のウィンドウへのDock再表示イベントとエクスポート済みDockメニューの復帰項目から、ネイティブの透過OFF・ウィンドウ表示へ復旧することを確認しています。[Windows CI](https://github.com/atstti/DAMeter/actions/runs/44969635623) も成功しました。
 
-[0.1.11公開CI](https://github.com/atstti/codex/actions/runs/44970104226) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42,036,897バイト）を匿名ダウンロードして、公開SHA-256と一致することを確認しました。
+[0.1.11公開CI](https://github.com/atstti/DAMeter/actions/runs/44970104226) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42,036,897バイト）を匿名ダウンロードして、公開SHA-256と一致することを確認しました。
 
 ## Mac版0.1.10：矢印カーソルとアイコン検証
 
 右下のカーソルを `Arrow` に変更しました。ネイティブ検証は実ホバー後に `NSCursor.currentCursor == NSCursor.arrowCursor` かつ十字と異なることを確認します。受け入れ済みの14×14マークと20×20の入力領域は変更していません。
 
-Mac配布検証へ、ICNSのデコード・サイズ検証と、`NSWorkspace.shared.icon(forFile:)` で対象バンドルから取得したアイコンがDAMeterのアイコンであることの検証を追加します。ソース `4fa14f2` の [Mac CI](https://github.com/atstti/codex/actions/runs/44960578144) はApple Silicon・Intelの両方で成功しました。3表示で通常の矢印カーソルが選択されることに加え、ICNSの各サイズと、macOSがバンドルから取得するアイコンがDAMeterのアイコンであることを確認しました。[Windows CI](https://github.com/atstti/codex/actions/runs/44960578176) も成功しました。ユーザーの権限一覧では、システム設定の再起動とDAMeterの削除・再追加では戻りませんでしたが、`lsregister -f /Applications/DAMeter.app` とシステム設定の開き直しにより、DAMeterのアイコンに戻ったとの確認を得ました。配布ファイルの変更ではなく、ユーザーのMacのアプリ登録情報の更新で復旧したケースです。
+Mac配布検証へ、ICNSのデコード・サイズ検証と、`NSWorkspace.shared.icon(forFile:)` で対象バンドルから取得したアイコンがDAMeterのアイコンであることの検証を追加します。ソース `4fa14f2` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/44960578144) はApple Silicon・Intelの両方で成功しました。3表示で通常の矢印カーソルが選択されることに加え、ICNSの各サイズと、macOSがバンドルから取得するアイコンがDAMeterのアイコンであることを確認しました。[Windows CI](https://github.com/atstti/DAMeter/actions/runs/44960578176) も成功しました。ユーザーの権限一覧では、システム設定の再起動とDAMeterの削除・再追加では戻りませんでしたが、`lsregister -f /Applications/DAMeter.app` とシステム設定の開き直しにより、DAMeterのアイコンに戻ったとの確認を得ました。配布ファイルの変更ではなく、ユーザーのMacのアプリ登録情報の更新で復旧したケースです。
 
-[0.1.10公開CI](https://github.com/atstti/codex/actions/runs/44961151487) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42032712バイト）を匿名ダウンロードして、公開SHA-256と一致することを検証しました。
+[0.1.10公開CI](https://github.com/atstti/DAMeter/actions/runs/44961151487) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42032712バイト）を匿名ダウンロードして、公開SHA-256と一致することを検証しました。
 
 ## Mac版0.1.9：標準カーソルと小型マーク
 
 独自Bitmapカーソルを取り除いて `BottomRightCorner` を復元し、ネイティブ検証も実ホバー後の `NSCursor.currentCursor` が当初と同じ `NSCursor.crosshairCursor` であることを確認する形に戻しました。3表示での拡縮・移動の反復検証は維持します。
 
-見た目のマークだけを14×14へ小さくし、入力領域は20×20を維持します。Linuxで既存のMac回帰テスト72件が成功し、3表示の画像出力で小型マークの位置を確認しました。ソース `ed5d82d` の [Mac CI](https://github.com/atstti/codex/actions/runs/44957977475) はApple Silicon・Intelともに成功しました。実際のホバー入力後のカーソルが当初の標準カーソルであること、拡縮と上端への移動を反復しても操作できることを確認しています。[Windows CI](https://github.com/atstti/codex/actions/runs/44957977458) も成功しました。
+見た目のマークだけを14×14へ小さくし、入力領域は20×20を維持します。Linuxで既存のMac回帰テスト72件が成功し、3表示の画像出力で小型マークの位置を確認しました。ソース `ed5d82d` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/44957977475) はApple Silicon・Intelともに成功しました。実際のホバー入力後のカーソルが当初の標準カーソルであること、拡縮と上端への移動を反復しても操作できることを確認しています。[Windows CI](https://github.com/atstti/DAMeter/actions/runs/44957977458) も成功しました。
 
-[0.1.9公開CI](https://github.com/atstti/codex/actions/runs/44958493760) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42,033,857バイト）を匿名ダウンロードして、公開SHA-256と一致することを確認しました。
+[0.1.9公開CI](https://github.com/atstti/DAMeter/actions/runs/44958493760) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。公開ページHTTP 200と全8ファイルを確認し、Apple Silicon用DMG（42,033,857バイト）を匿名ダウンロードして、公開SHA-256と一致することを確認しました。
 
 ## Mac版0.1.8：サイズ変更カーソルと常時表示マーク
 
 LinuxでMacの既存回帰テスト72件が成功しました。フローティングでもサイズ変更マークが表示されるよう既存の画面テストを更新し、右下の入力領域・拡縮・移動・透過復帰が維持されることを確認しています。Releaseビルドは警告0・エラー0です。3種類のメーターをSkiaで画像出力し、右下マークの位置も確認しました（このLinux画像確認はmacOSのフォント表示確認とは異なります）。
 
-Avalonia.Native 11.3.22の `cursor.mm` が `BottomRightCorner` を `NSCursor.crosshairCursor` へ割り当てることをソースで確認しました。独自Bitmapカーソルへ変更し、ネイティブ検証では3表示それぞれで実際のホバー入力後の `NSCursor.currentCursor` が十字と異なり、画像32×32・ホットスポット16,16であることを検証します。AppKit経由の拡縮・上端移動の検証も維持します。ソース `35c60f8` の [Mac CI](https://github.com/atstti/codex/actions/runs/44924156498) はApple Silicon・Intelともに成功し、各CPUの3表示で専用カーソルの画像寸法・ホットスポット・十字と異なることを確認しました。[Windows CI](https://github.com/atstti/codex/actions/runs/44924156429) も成功しています。
+Avalonia.Native 11.3.22の `cursor.mm` が `BottomRightCorner` を `NSCursor.crosshairCursor` へ割り当てることをソースで確認しました。独自Bitmapカーソルへ変更し、ネイティブ検証では3表示それぞれで実際のホバー入力後の `NSCursor.currentCursor` が十字と異なり、画像32×32・ホットスポット16,16であることを検証します。AppKit経由の拡縮・上端移動の検証も維持します。ソース `35c60f8` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/44924156498) はApple Silicon・Intelともに成功し、各CPUの3表示で専用カーソルの画像寸法・ホットスポット・十字と異なることを確認しました。[Windows CI](https://github.com/atstti/DAMeter/actions/runs/44924156429) も成功しています。
 
 ## Mac版0.1.7：移動改善と再現診断
 
@@ -42,9 +42,9 @@ LinuxでMacの回帰テスト72件が成功しました。追加した移動テ�
 
 `tests/DAMeter.Mac.NativeSmoke` は別プロセスでAvalonia.Nativeを起動し、実際のQuartzカーソル位置とAppKitのアプリ内マウスイベントを使用します。3表示で36回の拡縮、同じマウス位置での再通知、サイズ変更中のネイティブ位置の維持、捕捉解除、上端への移動と拡縮の反復を検証します。グローバルなマウスボタン状態だけは合成状態へ置き換え、音声収録は開始しません。物理マウス・トラックパッドでの操作の再現確認とは区別します。
 
-初回の旧実装のネイティブ検証は、途中のサイズ・位置の検証を通過しましたが、処理済みイベントを数えていなかった最後の集計で失敗しました。このテスト側の集計を修正し、移動改善を含むコミット `c721bfc` の [Mac CI](https://github.com/atstti/codex/actions/runs/44920260873) はApple Silicon・Intelともに成功しました。最終ソース `55e6bb3` の [Mac CI](https://github.com/atstti/codex/actions/runs/44920599638) はApple Silicon・Intelともに成功し、[Windows CI](https://github.com/atstti/codex/actions/runs/44920599559) も成功しました。Core47件・Mac72件の計119件に加え、AppKit入力を通したネイティブ操作検証と署名・配布ビルドを確認しています。突然大きくなる症状の原因は未確定です。0.1.7ではバージョン表示とローカルの操作ログを用意しました。
+初回の旧実装のネイティブ検証は、途中のサイズ・位置の検証を通過しましたが、処理済みイベントを数えていなかった最後の集計で失敗しました。このテスト側の集計を修正し、移動改善を含むコミット `c721bfc` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/44920260873) はApple Silicon・Intelともに成功しました。最終ソース `55e6bb3` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/44920599638) はApple Silicon・Intelともに成功し、[Windows CI](https://github.com/atstti/DAMeter/actions/runs/44920599559) も成功しました。Core47件・Mac72件の計119件に加え、AppKit入力を通したネイティブ操作検証と署名・配布ビルドを確認しています。突然大きくなる症状の原因は未確定です。0.1.7ではバージョン表示とローカルの操作ログを用意しました。
 
-[0.1.7公開CI](https://github.com/atstti/codex/actions/runs/44921092591) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。Releasesの8ファイルと公開ページHTTP 200を確認し、Apple Silicon用DMG（42,030,145バイト）を匿名ダウンロードして、公開SHA-256と一致することを検証しました。物理マウス・トラックパッドでの症状の解消は未確認です。
+[0.1.7公開CI](https://github.com/atstti/DAMeter/actions/runs/44921092591) はWindows・Apple Silicon・Intelと公開処理のすべてに成功しました。Releasesの8ファイルと公開ページHTTP 200を確認し、Apple Silicon用DMG（42,030,145バイト）を匿名ダウンロードして、公開SHA-256と一致することを検証しました。物理マウス・トラックパッドでの症状の解消は未確認です。
 
 ## Mac版0.1.6のサイズの跳ね・上余白
 
@@ -52,7 +52,7 @@ LinuxでCore47件・Mac63件、計110件が成功しました。全体Releaseビ
 
 Mac CIの権限不要スモークテストを拡張しました。CoreGraphicsで画面上のマウス位置を読み出し、実際のネイティブウィンドウで3表示・12回の寸法変更が反映されること、透明な上余白がないこと、作業領域上端へ配置できることを検証します。音声収録やシステム入力の送信は行いません。人が実際にドラッグする操作感の確認とは区別します。
 
-最終ソース `b092335` の [Mac事前検証](https://github.com/atstti/codex/actions/runs/44907256599) は両CPUで成功しました。Intelで得た寸法を基に、枠線の中心ではなく描画の外端を測る判定へ修正し、画素丸めの再現テストも追加しています。[0.1.6公開CI](https://github.com/atstti/codex/actions/runs/44907689424) も全OSで成功し、Releasesの8ファイルとApple Silicon用DMGへの匿名HTTPアクセス200を確認しました。
+最終ソース `b092335` の [Mac事前検証](https://github.com/atstti/DAMeter/actions/runs/44907256599) は両CPUで成功しました。Intelで得た寸法を基に、枠線の中心ではなく描画の外端を測る判定へ修正し、画素丸めの再現テストも追加しています。[0.1.6公開CI](https://github.com/atstti/DAMeter/actions/runs/44907689424) も全OSで成功し、Releasesの8ファイルとApple Silicon用DMGへの匿名HTTPアクセス200を確認しました。
 
 ## Mac版0.1.5の繰り返しサイズ変更
 
@@ -60,7 +60,7 @@ Mac CIの権限不要スモークテストを拡張しました。CoreGraphics�
 
 Avalonia 11.3.22のmacOS側で `BeginResizeDrag` が処理を行わないことをソースで確認し、ウィンドウ内の座標とポインター捕捉による処理へ変更しました。盤面の描画と共通の位置計算を使い、透明な余白ではなく実際の盤面の右下に操作領域を配置します。音声取得コードとWindows版のサイズ変更処理は変更していません。
 
-コミット `ee8703b` の [0.1.5公開CI](https://github.com/atstti/codex/actions/runs/44901548126) はWindows・Apple Silicon・Intelの全ビルドに成功しました。Macの署名・起動終了と配布ファイルのチェックサムを検証し、Releasesに公開しました。公開ページとApple Silicon用DMGは、ログインしないHTTPアクセスでも200で取得できることを確認しています。
+コミット `ee8703b` の [0.1.5公開CI](https://github.com/atstti/DAMeter/actions/runs/44901548126) はWindows・Apple Silicon・Intelの全ビルドに成功しました。Macの署名・起動終了と配布ファイルのチェックサムを検証し、Releasesに公開しました。公開ページとApple Silicon用DMGは、ログインしないHTTPアクセスでも200で取得できることを確認しています。
 
 HeadlessテストはmacOS実機の操作確認を意味しません。特にRetina／複数モニター、盤面の角からの繰り返し操作、クリック透過解除後の操作は実機確認が必要です。
 
@@ -70,7 +70,7 @@ HeadlessテストはmacOS実機の操作確認を意味しません。特にReti
 
 macOS上のウィンドウ操作・表示確認はMac CIと実機での確認を区別して記録します。音声取得コードは変更していません。
 
-最終ソース `0057b96` の [Mac CI](https://github.com/atstti/codex/actions/runs/44897497586) でApple Silicon向けのテスト・署名検証・ライブラリ読み込み・実ウィンドウの起動終了・ZIP／DMG生成が成功しました。SDKは配布用ロックファイルと一致する10.0.403に固定し、同じソースの [Windows CI](https://github.com/atstti/codex/actions/runs/44897497624) も成功しました。今回のフローティング表示の実機操作は未確認です。
+最終ソース `0057b96` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/44897497586) でApple Silicon向けのテスト・署名検証・ライブラリ読み込み・実ウィンドウの起動終了・ZIP／DMG生成が成功しました。SDKは配布用ロックファイルと一致する10.0.403に固定し、同じソースの [Windows CI](https://github.com/atstti/DAMeter/actions/runs/44897497624) も成功しました。今回のフローティング表示の実機操作は未確認です。
 
 Linuxのオフスクリーン描画では、3種類のメーターで周囲と右下隅が完全透明（alpha=0）であることを確認しました。このHeadless環境では文字が描画されないため、画像での確認範囲は背景・形状のみです。
 
@@ -82,11 +82,11 @@ Core46件・Mac46件、計92件がLinuxで成功しました（失敗0・スキ�
 
 Mac CIではDAMeter本体へSwiftライブラリを読み込み、識別子が `org.atstti.DAMeter` であること、9件のPCM変換、署名、起動・終了を確認します。このチェックは収録権限を要求せず、実音声が取得できたことを意味しません。旧プロセス方式のテストは互換性記録として残していますが、製品の音声取得経路では使いません。
 
-コミット `4a17cab` の [Mac CI](https://github.com/atstti/codex/actions/runs/41649034815) では、Apple Silicon用のコンパイル・署名検証・本体プロセス内での識別子／PCM変換確認・起動／終了・ZIP／DMG生成が成功し、配布Artifactを作成しました。開発環境での実音声取得は未実施です。配布後、ユーザーのApple Silicon Macで収録許可を削除・追加し直したところメーターが動いたとの確認がありました。再登録の手順は [MACOS.md](MACOS.md) に記録しています。
+コミット `4a17cab` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/41649034815) では、Apple Silicon用のコンパイル・署名検証・本体プロセス内での識別子／PCM変換確認・起動／終了・ZIP／DMG生成が成功し、配布Artifactを作成しました。開発環境での実音声取得は未実施です。配布後、ユーザーのApple Silicon Macで収録許可を削除・追加し直したところメーターが動いたとの確認がありました。再登録の手順は [MACOS.md](MACOS.md) に記録しています。
 
 ## Mac版0.1.2の検証
 
-LinuxでCore46件・Mac25件、計71件が成功し、失敗・スキップは0件です。 [0.1.2のMac CI](https://github.com/atstti/codex/actions/runs/41622362194) もApple Silicon／Intelの両方で成功しました。アプリ名がネイティブ初期化前からDAMeterであること、権限設定ボタンの操作、無音データ受信と権限待ちの区別、遅れて届く開始通知で実際の受信状態が上書きされないことを追加検証しました。全体Releaseビルドも警告0・エラー0です。
+LinuxでCore46件・Mac25件、計71件が成功し、失敗・スキップは0件です。 [0.1.2のMac CI](https://github.com/atstti/DAMeter/actions/runs/41622362194) もApple Silicon／Intelの両方で成功しました。アプリ名がネイティブ初期化前からDAMeterであること、権限設定ボタンの操作、無音データ受信と権限待ちの区別、遅れて届く開始通知で実際の受信状態が上書きされないことを追加検証しました。全体Releaseビルドも警告0・エラー0です。
 
 ScreenCaptureKitの実際の許可判定、許可済みMacでの音声入力、保護されたコンテンツ等の動作は、このLinuxテストでは検証できません。Mac CIはSwiftのコンパイル、署名、アプリ名と権限不要の起動・終了チェックを実行し、実音声の反応はユーザーのMacで別途確認します。
 
@@ -94,13 +94,13 @@ ScreenCaptureKitの実際の許可判定、許可済みMacでの音声入力、�
 
 Core46件・Mac20件、計66件がLinuxで成功し、失敗・スキップは0件です。アプリ／OSからの終了をキャンセルしないこと、ウィンドウだけ閉じた場合の非表示と復帰、終了ボタン、音声未受信のまま停止しない子プロセスの終了、ヘルパーの構成エラーで起動を繰り返さないことを検証しました。
 
-Finderの親アプリ識別情報を子に引き継がないテストと、別アプリの識別を返すヘルパーを拒否するテストも追加しています。 0.1.1の [Mac CI](https://github.com/atstti/codex/actions/runs/41618187095) はApple Silicon／Intelの両方で成功し、署名・ヘルパーの識別・実アプリ経由のヘルパー起動チェックと、ネイティブのメニューバーを表示した状態で通常の終了要求が完了するチェックを通過しました。Mac CIでは専用ヘルパーのBundle ID・LSUIElement・accessoryポリシーを確認し、実アプリから同じヘルパーを起動する権限不要のスモークテストを実行します。実際の音声取得許可ダイアログとユーザーのMacでの再現確認は別途必要です。
+Finderの親アプリ識別情報を子に引き継がないテストと、別アプリの識別を返すヘルパーを拒否するテストも追加しています。 0.1.1の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/41618187095) はApple Silicon／Intelの両方で成功し、署名・ヘルパーの識別・実アプリ経由のヘルパー起動チェックと、ネイティブのメニューバーを表示した状態で通常の終了要求が完了するチェックを通過しました。Mac CIでは専用ヘルパーのBundle ID・LSUIElement・accessoryポリシーを確認し、実アプリから同じヘルパーを起動する権限不要のスモークテストを実行します。実際の音声取得許可ダイアログとユーザーのMacでの再現確認は別途必要です。
 
 ## Mac版の追加検証
 
 Mac版は共通Coreのパケット境界検証を17件追加し、Coreテストは46件です。Mac専用のUI・子プロセス通信テスト11件と合わせ、Linuxで57件すべて成功、失敗0・スキップ0を確認しました。音声ヘルパーの権限不要のPCM変換セルフテスト9件も、Apple Silicon / Intelの両macOSランナーで成功しました。
 
-LinuxではWindows・Mac・両テストプロジェクトを含むソリューションをReleaseでビルドし、警告0・エラー0を確認しています。コミット `b5544b0` の [Mac CI](https://github.com/atstti/codex/actions/runs/41603225132) は両CPUで成功しました。共通・Macテスト、Swiftコンパイル、`.app`の署名検証、3種類の描画を通る起動チェック、ZIP/DMG生成を実行しています。同じコミットの [Windows CI](https://github.com/atstti/codex/actions/runs/41603225173) も成功しました。
+LinuxではWindows・Mac・両テストプロジェクトを含むソリューションをReleaseでビルドし、警告0・エラー0を確認しています。コミット `b5544b0` の [Mac CI](https://github.com/atstti/DAMeter/actions/runs/41603225132) は両CPUで成功しました。共通・Macテスト、Swiftコンパイル、`.app`の署名検証、3種類の描画を通る起動チェック、ZIP/DMG生成を実行しています。同じコミットの [Windows CI](https://github.com/atstti/DAMeter/actions/runs/41603225173) も成功しました。
 
 MacのUI・音声パイプの自動テストは実デバイスを使いません。画面収録権限の許可・拒否、実際のシステム音声、クリック透過からの復帰、Retina／モニター切断は実機での受け入れ確認が必要です。Mac用の詳細は [MACOS.md](MACOS.md) を参照してください。
 

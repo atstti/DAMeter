@@ -8,13 +8,13 @@ Windows 10 / 11（64bit）で再生中のシステム音声を表示する、C# 
 
 ## ダウンロード
 
-**[0.1.11試用版のダウンロードページ](https://github.com/atstti/codex/releases/tag/v0.1.11)** を開き、Assetsから自分の環境に合うファイルを選んでください。試用版を含む配布一覧は [Releases](https://github.com/atstti/codex/releases) にあります。
+**[0.1.11試用版のダウンロードページ](https://github.com/atstti/DAMeter/releases/tag/v0.1.11)** を開き、Assetsから自分の環境に合うファイルを選んでください。試用版を含む配布一覧は [Releases](https://github.com/atstti/DAMeter/releases) にあります。
 
 | 使用するパソコン | 0.1.11のダウンロード | 起動方法 |
 | --- | --- | --- |
-| Windows 10 / 11（64bit） | [DAMeter-win-x64.zip](https://github.com/atstti/codex/releases/download/v0.1.11/DAMeter-win-x64.zip) | ZIPを展開し、`DAMeter.exe` を起動 |
-| Mac・Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/codex/releases/download/v0.1.11/DAMeter-osx-arm64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
-| Mac・Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/codex/releases/download/v0.1.11/DAMeter-osx-x64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
+| Windows 10 / 11（64bit） | [DAMeter-win-x64.zip](https://github.com/atstti/DAMeter/releases/download/v0.1.11/DAMeter-win-x64.zip) | ZIPを展開し、`DAMeter.exe` を起動 |
+| Mac・Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/DAMeter/releases/download/v0.1.11/DAMeter-osx-arm64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
+| Mac・Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/DAMeter/releases/download/v0.1.11/DAMeter-osx-x64.dmg) | DMGを開き、`DAMeter.app` を「アプリケーション」へ移動 |
 
 配布ファイルは自己完結型で、実行時に.NETを別途インストールする必要はありません。Mac版はmacOS 15以降が対象です。更新するときは旧版を完全終了してから置き換えてください。
 

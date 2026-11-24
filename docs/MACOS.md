@@ -88,12 +88,12 @@ macOS のシステム音声を表示する Avalonia / .NET 10 アプリです。
 
 ## ダウンロードと起動
 
-**[0.1.6試用版のダウンロードページ](https://github.com/atstti/codex/releases/tag/v0.1.6)** のAssetsから、使用するMacに合ったDMGを選びます。試用版を含む配布一覧は [Releases](https://github.com/atstti/codex/releases) にあります。
+**[0.1.6試用版のダウンロードページ](https://github.com/atstti/DAMeter/releases/tag/v0.1.6)** のAssetsから、使用するMacに合ったDMGを選びます。試用版を含む配布一覧は [Releases](https://github.com/atstti/DAMeter/releases) にあります。
 
 | 使用するMac | 0.1.6のダウンロード |
 | --- | --- |
-| Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/codex/releases/download/v0.1.6/DAMeter-osx-arm64.dmg) |
-| Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/codex/releases/download/v0.1.6/DAMeter-osx-x64.dmg) |
+| Apple Silicon（M1以降） | [DAMeter-osx-arm64.dmg](https://github.com/atstti/DAMeter/releases/download/v0.1.6/DAMeter-osx-arm64.dmg) |
+| Intel | [DAMeter-osx-x64.dmg](https://github.com/atstti/DAMeter/releases/download/v0.1.6/DAMeter-osx-x64.dmg) |
 
 1. 使用中のDAMeterを⌘Qまたは「終了」で完全終了します。
 2. ダウンロードしたDMGを開き、`DAMeter.app` を「アプリケーション」へドラッグします。旧版がある場合は置き換えます。
